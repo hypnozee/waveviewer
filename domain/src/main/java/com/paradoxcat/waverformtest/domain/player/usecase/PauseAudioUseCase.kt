@@ -1,6 +1,6 @@
-package com.paradoxcat.waveformtest.domain.player.usecase
+package com.paradoxcat.waverformtest.domain.player.usecase
 
-import com.paradoxcat.waveformtest.domain.player.repository.AudioPlayer
+import com.paradoxcat.waverformtest.domain.player.repository.AudioPlayer
 
 /**
  * Use case for pausing the currently playing audio.

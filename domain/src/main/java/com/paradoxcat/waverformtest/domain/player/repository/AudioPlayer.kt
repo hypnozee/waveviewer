@@ -1,7 +1,6 @@
-package com.paradoxcat.waveformtest.domain.player.repository
+package com.paradoxcat.waverformtest.domain.player.repository
 
-import android.net.Uri
-import com.paradoxcat.waveformtest.domain.player.model.PlaybackState
+import com.paradoxcat.waverformtest.domain.player.model.PlaybackState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -10,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface AudioPlayer {
 
     val playbackState: StateFlow<PlaybackState>
-    suspend fun load(uri: Uri)
+    suspend fun load(uriString: String)
     fun play()
     fun pause()
     fun seekTo(positionMillis: Long)
