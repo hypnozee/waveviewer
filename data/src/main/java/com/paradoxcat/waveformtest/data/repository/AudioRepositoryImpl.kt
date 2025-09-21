@@ -1,7 +1,7 @@
 package com.paradoxcat.waveformtest.data.repository
 
 import android.annotation.SuppressLint
-import android.content.Context
+import android.content.ContentResolver
 import android.database.Cursor
 import android.provider.OpenableColumns
 import android.util.Log
@@ -16,7 +16,7 @@ import java.io.InputStream
  * Gets audio file data.
  */
 class AudioRepositoryImpl(
-    private val context: Context,
+    private val contentResolver: ContentResolver,
 ) : AudioRepository {
 
     @SuppressLint("Recycle")
@@ -27,7 +27,7 @@ class AudioRepositoryImpl(
                     Log.e("AudioRepositoryImpl", "URI string is empty, cannot open input stream.")
                     return@withContext null
                 }
-                context.contentResolver.openInputStream(uriString.toUri())
+                contentResolver.openInputStream(uriString.toUri())
             } catch (e: Exception) {
                 Log.e("AudioRepositoryImpl", "Error opening input stream for URI: $uriString", e)
                 null
@@ -46,7 +46,7 @@ class AudioRepositoryImpl(
 
             if (uri.scheme == "content") {
                 try {
-                    val cursor: Cursor? = context.contentResolver.query(
+                    val cursor: Cursor? = contentResolver.query(
                         uri,
                         arrayOf(OpenableColumns.DISPLAY_NAME),
                         null,
@@ -85,7 +85,6 @@ class AudioRepositoryImpl(
                             "File name from URI path: $fileName for URI: $uri"
                         )
                     } else {
-                        // Use the whole path if no slash is found
                         fileName = path
                         Log.d(
                             "AudioRepositoryImpl",

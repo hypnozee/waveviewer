@@ -1,4 +1,4 @@
-package com.paradoxcat.waveformtest.di
+package com.paradoxcat.waveformtest.domain.di
 
 import com.paradoxcat.waveformtest.domain.player.usecase.LoadAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.ObservePlaybackStateUseCase
@@ -8,9 +8,7 @@ import com.paradoxcat.waveformtest.domain.player.usecase.ReleasePlayerUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.SeekAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.StopAudioUseCase
 import org.koin.dsl.module
-
-val appModule = module {
-    // Domain Use Cases
+val domainModule = module {
     factory { LoadAudioUseCase(get()) }
     factory { PlayAudioUseCase(get()) }
     factory { PauseAudioUseCase(get()) }

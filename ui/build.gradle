@@ -38,7 +38,6 @@ dependencies {
     implementation libs.androidx.material3
     implementation libs.google.material
 
-
     implementation libs.koin.android
 
     debugImplementation libs.androidx.ui.tooling

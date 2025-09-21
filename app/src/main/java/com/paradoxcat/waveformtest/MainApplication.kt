@@ -3,6 +3,7 @@ package com.paradoxcat.waveformtest
 import android.app.Application
 import com.paradoxcat.waveformtest.data.di.dataModule
 import com.paradoxcat.waveformtest.di.appModule
+import com.paradoxcat.waveformtest.domain.di.domainModule
 import com.paradoxcat.waveformtest.ui.di.uiModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -21,7 +22,7 @@ class MainApplication : Application() {
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@MainApplication)
-            modules(appModule, dataModule, uiModule) // Updated modules
+            modules(appModule, dataModule, uiModule, domainModule)
         }
     }
 }
