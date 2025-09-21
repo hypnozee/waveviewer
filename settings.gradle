@@ -16,3 +16,4 @@ rootProject.name = "ParadoxWaveViewer"
 include ':app'
 include ':domain'
 include ':data'
+include ':ui'
