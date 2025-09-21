@@ -18,7 +18,10 @@ android {
 
 dependencies {
     implementation project(':domain')
+    implementation libs.androidx.core.ktx
     implementation libs.kotlinx.coroutines.core
+
+    implementation libs.koin.android
 
     testImplementation libs.junit
     testImplementation libs.mockito.core

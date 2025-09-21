@@ -10,4 +10,8 @@ data class PlaybackState(
     val totalDurationMillis: Long = 0L,
     val isLoading: Boolean = false,
     val error: String? = null,
-)
+) {
+    companion object {
+        val default = PlaybackState()
+    }
+}
