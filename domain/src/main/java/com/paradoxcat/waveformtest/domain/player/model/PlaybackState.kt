@@ -1,4 +1,4 @@
-package com.paradoxcat.waverformtest.domain.player.model
+package com.paradoxcat.waveformtest.domain.player.model
 
 /**
  * Represents the current state of media playback.

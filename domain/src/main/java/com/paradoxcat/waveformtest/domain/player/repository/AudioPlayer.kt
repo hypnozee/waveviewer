@@ -1,6 +1,6 @@
-package com.paradoxcat.waverformtest.domain.player.repository
+package com.paradoxcat.waveformtest.domain.player.repository
 
-import com.paradoxcat.waverformtest.domain.player.model.PlaybackState
+import com.paradoxcat.waveformtest.domain.player.model.PlaybackState
 import kotlinx.coroutines.flow.StateFlow
 
 /**

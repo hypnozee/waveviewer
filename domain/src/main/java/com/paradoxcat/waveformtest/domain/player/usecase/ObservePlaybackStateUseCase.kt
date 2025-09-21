@@ -1,7 +1,7 @@
-package com.paradoxcat.waverformtest.domain.player.usecase
+package com.paradoxcat.waveformtest.domain.player.usecase
 
-import com.paradoxcat.waverformtest.domain.player.model.PlaybackState
-import com.paradoxcat.waverformtest.domain.player.repository.AudioPlayer
+import com.paradoxcat.waveformtest.domain.player.model.PlaybackState
+import com.paradoxcat.waveformtest.domain.player.repository.AudioPlayer
 import kotlinx.coroutines.flow.StateFlow
 
 /**

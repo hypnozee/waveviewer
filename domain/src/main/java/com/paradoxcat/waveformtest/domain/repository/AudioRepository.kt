@@ -1,6 +1,6 @@
-package com.paradoxcat.waverformtest.domain.repository
+package com.paradoxcat.waveformtest.domain.repository
 
-import com.paradoxcat.waverformtest.domain.model.AudioTrackDetails
+import com.paradoxcat.waveformtest.domain.model.AudioTrackDetails
 import java.io.InputStream
 
 /**

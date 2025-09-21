@@ -8,6 +8,6 @@ kotlin {
 }
 
 dependencies {
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
-    testImplementation 'junit:junit:4.13.2'
+    implementation libs.kotlinx.coroutines.core
+    testImplementation libs.junit
 }

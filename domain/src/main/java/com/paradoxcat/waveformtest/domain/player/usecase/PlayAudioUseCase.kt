@@ -1,6 +1,6 @@
-package com.paradoxcat.waverformtest.domain.player.usecase
+package com.paradoxcat.waveformtest.domain.player.usecase
 
-import com.paradoxcat.waverformtest.domain.player.repository.AudioPlayer
+import com.paradoxcat.waveformtest.domain.player.repository.AudioPlayer
 
 /**
  * Use case for starting or resuming audio playback.

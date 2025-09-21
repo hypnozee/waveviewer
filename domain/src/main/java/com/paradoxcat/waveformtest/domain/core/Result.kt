@@ -1,4 +1,4 @@
-package com.paradoxcat.waverformtest.domain.core
+package com.paradoxcat.waveformtest.domain.core
 
 /**
  * Handle the outcome of audio operations.

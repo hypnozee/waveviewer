@@ -1,4 +1,4 @@
-package com.paradoxcat.waverformtest.domain.model
+package com.paradoxcat.waveformtest.domain.model
 
 /**
  * Audio track name.
