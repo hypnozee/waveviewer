@@ -13,7 +13,9 @@ val uiModule = module {
             seekAudioUseCase = get(),
             stopAudioUseCase = get(),
             observePlaybackStateUseCase = get(),
-            releasePlayerUseCase = get()
+            releasePlayerUseCase = get(),
+            getWaveformUseCase = get(),
+            getAudioTrackDetailsUseCase = get(),
         )
     }
 }
