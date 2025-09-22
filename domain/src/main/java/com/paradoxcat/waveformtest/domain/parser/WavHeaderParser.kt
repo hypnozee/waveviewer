@@ -9,15 +9,17 @@ import java.nio.ByteOrder
 /**
  * A helper for reading the header of WAV audio files.
  * It looks for important parts like "RIFF", "WAVE", "fmt ", and "data"
- * Interesting theory behind lossless audio decoding.
+ * This parser is specifically configured to support only 16-bit mono PCM WAV files.
  */
 object WavHeaderParser {
 
-    // We care to find out about:
-    //    val channels: Int,
-    //    val sampleRate: Int,
-    //    val bitDepth: Int,
-    // +  dataChunkDeclaredSize,
+    private const val EXPECTED_CHANNELS = 1 // Mono
+    private const val EXPECTED_BIT_DEPTH = 16 // 16-bit
+
+    /**
+     * Reads the header of a WAV file to find the audio data.
+     * Verifies the WAV file is 16-bit mono PCM.
+     */
     fun parseWavHeaderAndLocateDataChunk(
         inputStream: InputStream,
         uriString: String,
@@ -39,6 +41,9 @@ object WavHeaderParser {
                             throw IOException("'data' chunk found before 'fmt ' in $uriString.")
                         }
                         val (channels, sampleRate, bitDepth) = fmtInfo
+                        if (channels != EXPECTED_CHANNELS || bitDepth != EXPECTED_BIT_DEPTH) {
+                            throw IOException("Unsupported WAV format in $uriString: Expected $EXPECTED_CHANNELS channels and $EXPECTED_BIT_DEPTH-bit. Got $channels channels and $bitDepth-bit.")
+                        }
                         return WavFormatInfo(channels, sampleRate, bitDepth, chunkSize)
                     }
 
@@ -97,19 +102,27 @@ object WavHeaderParser {
         uriString: String,
     ): Triple<Int, Int, Int> {
         if (size < 16) {
-            throw IOException("'fmt ' chunk too small ($size bytes) in $uriString.")
+            throw IOException("'fmt ' chunk too small ($size bytes) for 16-bit mono format in $uriString.")
         }
 
+        // Read the common part of the fmt chunk
         val fmtChunkBytes = ByteArray(16)
         if (inputStream.read(fmtChunkBytes) != 16) {
             throw IOException("Failed to read 'fmt ' chunk content (first 16 bytes) in $uriString.")
         }
 
+        // Skip any extra format specific data beyond the first 16 bytes
         if (size > 16) {
             val remainingToSkip = size - 16
             if (inputStream.skip(remainingToSkip) != remainingToSkip) {
                 throw IOException("Failed to skip remaining $remainingToSkip bytes in 'fmt ' chunk in $uriString.")
             }
+        }
+
+        val audioFormat =
+            ByteBuffer.wrap(fmtChunkBytes, 0, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt()
+        if (audioFormat != 1) { // 1 indicates PCM
+            throw IOException("Unsupported audio format in 'fmt ' chunk (expected PCM=1, got $audioFormat) in $uriString.")
         }
 
         val channels =
@@ -118,10 +131,13 @@ object WavHeaderParser {
         val bitDepth =
             ByteBuffer.wrap(fmtChunkBytes, 14, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt()
 
+        if (channels != EXPECTED_CHANNELS || bitDepth != EXPECTED_BIT_DEPTH) {
+            throw IOException("Unsupported WAV format in $uriString: Expected $EXPECTED_CHANNELS channel(s) and $EXPECTED_BIT_DEPTH-bit. Got $channels channel(s) and $bitDepth-bit.")
+        }
+
         return Triple(channels, sampleRate, bitDepth)
     }
 
-    // We don't care about other info other than fmt, data.
     private fun skipUnknownChunk(
         inputStream: InputStream,
         chunkId: String,
