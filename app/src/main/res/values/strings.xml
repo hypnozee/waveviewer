@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ParadoxWaveViewer</string>
+    <string name="media_operations_default_label">Audio playback and waveform display features</string>
 </resources>
+        
