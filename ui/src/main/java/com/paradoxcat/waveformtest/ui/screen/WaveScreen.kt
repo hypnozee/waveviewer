@@ -65,17 +65,19 @@ fun WaveScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Text(text = "Waveform Visualizer", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(16.dp))
 
-            FilePickerBar(
-                fileName = uiState.fileName,
-                onPickFile = pickFileAction
-            )
+            Text(text = "Waveform Visualizer", style = MaterialTheme.typography.headlineSmall)
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             NormalizationToggle(
                 dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
                 onToggle = { onEvent(WaveScreenEvent.ToggleDynamicNormalization) }
+            )
+
+            FilePickerBar(
+                fileName = uiState.fileName,
+                onPickFile = pickFileAction
             )
 
             Box(
@@ -138,12 +140,16 @@ fun WaveScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
+
                         CircularProgressIndicator()
+
                         Spacer(modifier = Modifier.height(8.dp))
+
                         Text(if (uiState.isLoadingFile) "Loading file..." else "Processing waveform...")
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             uiState.fileUri?.let {
@@ -159,6 +165,7 @@ fun WaveScreen(
 
             uiState.errorMessage?.let {
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Text(
                     text = it,
                     color = MaterialTheme.colorScheme.error,

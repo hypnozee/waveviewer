@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-
     <!-- Had to add this because of
          AppOps system_server Exception:
          attributionTag not declared in manifest of com.pdx.ym.waveviewer -->
     <attribution
-        android:tag="media_operations_default"
-        android:label="@string/media_operations_default_label" />
+        android:label="@string/media_operations_default_label"
+        android:tag="media_operations_default" />
 
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ParadoxWaveViewer">
+
         <activity
             android:name="com.paradoxcat.waveformtest.MainActivity"
             android:exported="true">
