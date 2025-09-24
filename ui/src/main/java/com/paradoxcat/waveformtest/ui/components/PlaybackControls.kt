@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 import java.util.Locale
@@ -78,7 +79,7 @@ fun PlaybackControlsPreviewPlaying() {
     }
 }
 
-@Preview(showBackground = true, name = "Playback Controls - Paused")
+@PreviewLightDark
 @Composable
 fun PlaybackControlsPreviewPaused() {
     ParadoxWaveViewerTheme {
@@ -93,7 +94,7 @@ fun PlaybackControlsPreviewPaused() {
     }
 }
 
-@Preview(showBackground = true, name = "Playback Controls - Buffering")
+@PreviewLightDark
 @Composable
 fun PlaybackControlsPreviewBuffering() {
     ParadoxWaveViewerTheme {

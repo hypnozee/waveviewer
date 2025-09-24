@@ -19,8 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 
 @Composable
 fun FilePickerBar(
@@ -71,18 +72,18 @@ fun FilePickerBar(
     }
 }
 
-@Preview(showBackground = true, name = "File Picker Bar - No File")
+@PreviewLightDark
 @Composable
 fun FilePickerBarPreviewNoFile() {
-    MaterialTheme {
+    ParadoxWaveViewerTheme {
         FilePickerBar(fileName = null, onPickFile = {})
     }
 }
 
-@Preview(showBackground = true, name = "File Picker Bar - File Selected")
+@PreviewLightDark
 @Composable
 fun FilePickerBarPreviewFileSelected() {
-    MaterialTheme {
+    ParadoxWaveViewerTheme {
         FilePickerBar(fileName = "example_long_audio_file_name.wav", onPickFile = {})
     }
 }

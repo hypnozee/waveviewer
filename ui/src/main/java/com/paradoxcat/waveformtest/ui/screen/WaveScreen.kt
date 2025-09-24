@@ -54,6 +54,19 @@ fun WaveScreen(
         filePickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav"))
     }
 
+    WaveScreenContent(
+        uiState = uiState,
+        onEvent = onEvent,
+        pickFileAction = pickFileAction
+    )
+}
+
+@Composable
+fun WaveScreenContent(
+    uiState: WaveScreenState,
+    onEvent: (WaveScreenEvent) -> Unit,
+    pickFileAction: () -> Unit,
+) {
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
@@ -106,9 +119,9 @@ fun WaveScreen(
                             } else {
                                 0f
                             }
-                            if (uiState.waveformData!!.isNotEmpty()) {
+                            if (uiState.waveformData.isNotEmpty()) {
                                 WaveformChart(
-                                    waveformData = uiState.waveformData!!,
+                                    waveformData = uiState.waveformData,
                                     currentPositionFraction = currentPositionFraction,
                                     dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
                                     modifier = Modifier.fillMaxSize(),

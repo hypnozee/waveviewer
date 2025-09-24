@@ -14,14 +14,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 
 @Composable
 fun NormalizationToggle(
     dynamicNormalizationEnabled: Boolean,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier
@@ -67,18 +68,18 @@ fun NormalizationToggle(
     }
 }
 
-@Preview(showBackground = true, name = "Normalization Toggle - True Amplitude")
+@PreviewLightDark
 @Composable
 fun NormalizationTogglePreviewTrueAmplitude() {
-    MaterialTheme {
+    ParadoxWaveViewerTheme {
         NormalizationToggle(dynamicNormalizationEnabled = false, onToggle = {})
     }
 }
 
-@Preview(showBackground = true, name = "Normalization Toggle - Fill Height")
+@PreviewLightDark
 @Composable
 fun NormalizationTogglePreviewFillHeight() {
-    MaterialTheme {
+    ParadoxWaveViewerTheme {
         NormalizationToggle(dynamicNormalizationEnabled = true, onToggle = {})
     }
 }
