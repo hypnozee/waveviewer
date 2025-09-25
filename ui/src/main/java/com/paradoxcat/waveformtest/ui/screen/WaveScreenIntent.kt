@@ -9,4 +9,5 @@ sealed interface WaveScreenIntent {
     data class SeekTo(val positionFraction: Float) : WaveScreenIntent
     data object ToggleDynamicNormalization : WaveScreenIntent
     data object ClearErrorMessage : WaveScreenIntent
+    data class TargetSegmentsChanged(val newSegmentCount: Int) : WaveScreenIntent // ADDED
 }

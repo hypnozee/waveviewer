@@ -89,7 +89,7 @@ fun WaveScreenVariousStatesPreview(
 ) {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = uiState,
+            viewState = uiState,
             onIntent = {},
             pickFileAction = {}
         )
@@ -101,7 +101,7 @@ fun WaveScreenVariousStatesPreview(
 fun WaveScreenPreviewInitial() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(fileName = "No file selected"),
+            viewState = WaveScreenState(fileName = "No file selected"),
             onIntent = {},
             pickFileAction = {}
         )
@@ -113,7 +113,7 @@ fun WaveScreenPreviewInitial() {
 fun WaveScreenPreviewLoadingFile() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(isLoadingFile = true, fileName = "sample.wav"),
+            viewState = WaveScreenState(isLoadingFile = true, fileName = "sample.wav"),
             onIntent = {},
             pickFileAction = {}
         )
@@ -125,7 +125,7 @@ fun WaveScreenPreviewLoadingFile() {
 fun WaveScreenPreviewProcessingWaveform() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(
+            viewState = WaveScreenState(
                 fileUri = "file:///android_asset/sample.wav".toUri(),
                 fileName = "sample.wav",
                 isLoadingWaveform = true
@@ -141,7 +141,7 @@ fun WaveScreenPreviewProcessingWaveform() {
 fun WaveScreenPreviewDataLoadedPlaying() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(
+            viewState = WaveScreenState(
                 fileUri = "file:///android_asset/sample.wav".toUri(),
                 fileName = "sample.wav",
                 waveformData = sampleWaveformData,
@@ -160,7 +160,7 @@ fun WaveScreenPreviewDataLoadedPlaying() {
 fun WaveScreenPreviewDataLoadedPausedDynamicNorm() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(
+            viewState = WaveScreenState(
                 fileUri = "file:///android_asset/sample.wav".toUri(),
                 fileName = "sample.wav",
                 waveformData = sampleWaveformData,
@@ -180,7 +180,7 @@ fun WaveScreenPreviewDataLoadedPausedDynamicNorm() {
 fun WaveScreenPreviewError() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
-            uiState = WaveScreenState(
+            viewState = WaveScreenState(
                 fileName = "problematic_file.wav",
                 errorMessage = "This is a long and detailed error message to check how it wraps and is displayed on the screen."
             ),

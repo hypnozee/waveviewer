@@ -30,23 +30,27 @@ class WaveViewModel(
     private val releasePlayerUseCase: ReleasePlayerUseCase,
 ) : ViewModel() {
 
-    private val viewState = MutableStateFlow(WaveScreenState())
-    val viewStateFlow = viewState.asStateFlow()
+    private val _viewState =
+        MutableStateFlow(WaveScreenState())
+    val viewStateFlow = _viewState.asStateFlow()
+
     private val waveformCache = mutableMapOf<String, WaveformResultData>()
 
     init {
         viewModelScope.launch {
             observePlaybackStateUseCase().collect { playbackState ->
-                viewState.update { currentState ->
+                _viewState.update { currentState ->
                     val latestErrorMessage = playbackState.error ?: currentState.errorMessage
-                    val resolvedTotalDuration = if (playbackState.totalDurationMillis == 0L &&
-                        currentState.fileUri != null &&
-                        waveformCache[currentState.fileUri.toString()] != null
-                    ) {
-                        waveformCache[currentState.fileUri.toString()]!!.durationMillis.toLong()
-                    } else {
-                        playbackState.totalDurationMillis
-                    }
+                    val currentFileUriString = currentState.fileUri?.toString()
+                    val cachedDataForUri =
+                        if (currentFileUriString != null) waveformCache[currentFileUriString] else null
+
+                    val resolvedTotalDuration =
+                        if (playbackState.totalDurationMillis == 0L && cachedDataForUri != null) {
+                            cachedDataForUri.durationMillis.toLong()
+                        } else {
+                            playbackState.totalDurationMillis
+                        }
                     currentState.copy(
                         isPlayerLoading = playbackState.isLoading,
                         isPlaying = playbackState.isPlaying,
@@ -62,48 +66,76 @@ class WaveViewModel(
     fun processIntent(intent: WaveScreenIntent) {
         when (intent) {
             is WaveScreenIntent.PickFileClicked -> {
-                viewState.update {
+                _viewState.update {
                     it.copy(
-                        errorMessage = null
+                        errorMessage = null // Clear previous errors
                     )
                 }
             }
 
             is WaveScreenIntent.FileSelected -> {
                 val selectedUri = intent.uri
-                val cacheKey = selectedUri.toString()
+                val selectedUriString = selectedUri.toString()
+                val segmentsToProcess = _viewState.value.currentTargetSegments
 
-                viewState.update {
+                _viewState.update {
                     it.copy(
                         fileUri = selectedUri,
                         fileName = null,
-                        isLoadingFile = false,
-                        waveformData = null,
+                        isLoadingFile = false, // File selection itself is done
+                        waveformData = null,   // Clear old waveform
                         errorMessage = null,
                         totalDurationMillis = 0L,
                         currentPositionMillis = 0L,
                         isPlaying = false,
-                        isLoadingWaveform = true,
-                        isPlayerLoading = true,
+                        isLoadingWaveform = true, // Start loading waveform
+                        isPlayerLoading = true    // Start loading player
                     )
                 }
 
                 viewModelScope.launch {
                     try {
-                        stopAudioUseCase() // Stop any previous playback
-                        loadAudioUseCase(selectedUri.toString()) // Load new audio into player
+                        stopAudioUseCase()
+                        loadAudioUseCase(selectedUriString)
 
-                        // Fetch track details
-                        when (val detailsResult =
-                            getAudioTrackDetailsUseCase(selectedUri.toString())) {
+                        getAudioTrackDetailsUseCase(selectedUriString).also { detailsResult ->
+                            when (detailsResult) {
+                                is Result.Success -> {
+                                    _viewState.update { it.copy(fileName = detailsResult.data.fileName) }
+                                }
+
+                                is Result.Error -> {
+                                    _viewState.update { state ->
+                                        val currentError = state.errorMessage
+                                        val newError = detailsResult.message
+                                        state.copy(
+                                            errorMessage = if (currentError != null && !currentError.contains(
+                                                    newError
+                                                )
+                                            ) "$currentError\n$newError" else newError
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        // Always fetch with current target segments. Cache will be updated.
+                        when (val waveformResult =
+                            getWaveformUseCase(selectedUriString, segmentsToProcess)) {
                             is Result.Success -> {
-                                viewState.update { it.copy(fileName = detailsResult.data.fileName) }
+                                waveformCache[selectedUriString] =
+                                    waveformResult.data // Update cache
+                                _viewState.update { state ->
+                                    state.copy(
+                                        waveformData = waveformResult.data.waveformSegments,
+                                        totalDurationMillis = if (state.totalDurationMillis == 0L) waveformResult.data.durationMillis.toLong() else state.totalDurationMillis,
+                                    )
+                                }
                             }
 
                             is Result.Error -> {
-                                viewState.update { state ->
+                                _viewState.update { state ->
                                     val currentError = state.errorMessage
-                                    val newError = detailsResult.message
+                                    val newError = waveformResult.message
                                     state.copy(
                                         errorMessage = if (currentError != null && !currentError.contains(
                                                 newError
@@ -113,89 +145,110 @@ class WaveViewModel(
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        _viewState.update {
+                            it.copy(
+                                errorMessage = "An unexpected error occurred: ${e.message}",
+                                isPlayerLoading = false
+                            )
+                        }
+                    } finally {
+                        _viewState.update { it.copy(isLoadingWaveform = false) }
+                    }
+                }
+            }
 
-                        // Get waveform data
-                        val cachedWaveformResult = waveformCache[cacheKey]
-                        if (cachedWaveformResult != null) {
-                            viewState.update {
-                                it.copy(
-                                    waveformData = cachedWaveformResult.waveformSegments,
-                                    totalDurationMillis = if (it.totalDurationMillis == 0L) cachedWaveformResult.durationMillis.toLong() else it.totalDurationMillis,
-                                )
-                            }
-                        } else {
-                            when (val waveformResult = getWaveformUseCase(selectedUri.toString())) {
+            is WaveScreenIntent.TargetSegmentsChanged -> {
+                val newSegmentCount =
+                    intent.newSegmentCount.coerceIn(MIN_TARGET_SEGMENTS, MAX_TARGET_SEGMENTS)
+                val currentFileUri = _viewState.value.fileUri
+
+                _viewState.update {
+                    it.copy(
+                        currentTargetSegments = newSegmentCount,
+                        // If a file is loaded, set loading state for waveform
+                        isLoadingWaveform = if (currentFileUri != null) true else it.isLoadingWaveform,
+                        waveformData = if (currentFileUri != null) null else it.waveformData // Clear old waveform if reprocessing
+                    )
+                }
+
+                if (currentFileUri != null) {
+                    val currentFileUriString = currentFileUri.toString()
+                    viewModelScope.launch {
+                        try {
+                            // Re-process waveform with new segment count
+                            when (val waveformResult =
+                                getWaveformUseCase(currentFileUriString, newSegmentCount)) {
                                 is Result.Success -> {
-                                    val resultToCache = WaveformResultData(
-                                        waveformSegments = waveformResult.data.waveformSegments,
-                                        durationMillis = waveformResult.data.durationMillis
-                                    )
-                                    waveformCache[cacheKey] = resultToCache
-                                    viewState.update { state ->
+                                    waveformCache[currentFileUriString] =
+                                        waveformResult.data // Update cache
+                                    _viewState.update { state ->
                                         state.copy(
                                             waveformData = waveformResult.data.waveformSegments,
-                                            totalDurationMillis = if (state.totalDurationMillis == 0L) waveformResult.data.durationMillis.toLong() else state.totalDurationMillis,
+                                            // Update duration from new processing if it was from cache or zero
+                                            totalDurationMillis = if (state.totalDurationMillis == 0L || waveformCache[currentFileUriString]?.durationMillis?.toLong() != state.totalDurationMillis) {
+                                                waveformResult.data.durationMillis.toLong()
+                                            } else {
+                                                state.totalDurationMillis
+                                            }
                                         )
                                     }
                                 }
 
                                 is Result.Error -> {
-                                    viewState.update { state ->
+                                    _viewState.update { state ->
                                         val currentError = state.errorMessage
                                         val newError = waveformResult.message
                                         state.copy(
                                             errorMessage = if (currentError != null && !currentError.contains(
                                                     newError
                                                 )
-                                            ) "$currentError\n$newError" else newError,
+                                            ) "$currentError\n$newError" else newError
                                         )
                                     }
                                 }
                             }
+                        } catch (e: Exception) {
+                            _viewState.update {
+                                it.copy(errorMessage = "Error re-processing waveform: ${e.message}")
+                            }
+                        } finally {
+                            _viewState.update { it.copy(isLoadingWaveform = false) }
                         }
-                    } catch (e: Exception) {
-                        viewState.update {
-                            it.copy(
-                                errorMessage = "An unexpected error occurred: ${e.message}",
-                                isPlayerLoading = false // Stop player loading on error
-                            )
-                        }
-                    } finally {
-                        viewState.update { it.copy(isLoadingWaveform = false) }
                     }
                 }
             }
 
             is WaveScreenIntent.PlayPauseClicked -> {
-                if (viewState.value.isPlaying) {
+                if (_viewState.value.isPlaying) {
                     pauseAudioUseCase()
                 } else {
-                    if (viewState.value.fileUri != null) {
-                        if (!viewState.value.isPlayerLoading) { // Check if player is ready
+                    if (_viewState.value.fileUri != null) {
+                        if (!_viewState.value.isPlayerLoading) {
                             playAudioUseCase()
                         } else {
-                            viewState.update { it.copy(errorMessage = "Player is still loading the audio.") }
+                            _viewState.update { it.copy(errorMessage = "Player is still loading the audio.") }
                         }
                     } else {
-                        viewState.update { it.copy(errorMessage = "No audio file loaded.") }
+                        _viewState.update { it.copy(errorMessage = "No audio file loaded.") }
                     }
                 }
             }
 
             is WaveScreenIntent.SeekTo -> {
-                val totalDuration = viewState.value.totalDurationMillis
-                if (totalDuration > 0 && !viewState.value.isPlayerLoading) {
+                val totalDuration = _viewState.value.totalDurationMillis
+                if (totalDuration > 0 && !_viewState.value.isPlayerLoading) {
                     val newPosition = (totalDuration * intent.positionFraction).toLong()
                     seekAudioUseCase(newPosition)
                 }
             }
 
             is WaveScreenIntent.ToggleDynamicNormalization -> {
-                viewState.update { it.copy(dynamicNormalizationEnabled = !it.dynamicNormalizationEnabled) }
+                _viewState.update { it.copy(dynamicNormalizationEnabled = !it.dynamicNormalizationEnabled) }
             }
 
             is WaveScreenIntent.ClearErrorMessage -> {
-                viewState.update { it.copy(errorMessage = null) }
+                _viewState.update { it.copy(errorMessage = null) }
             }
         }
     }

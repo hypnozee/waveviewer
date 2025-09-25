@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.ui.components.FilePickerBar
 import com.paradoxcat.waveformtest.ui.components.NormalizationToggle
 import com.paradoxcat.waveformtest.ui.components.PlaybackControls
+import com.paradoxcat.waveformtest.ui.components.TargetSegmentsControl
 import com.paradoxcat.waveformtest.ui.components.WaveformChart
 import java.util.Locale
 
@@ -42,36 +43,33 @@ fun WaveScreen(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
             uri?.let {
-                // Send FileSelected intent
                 onIntent(WaveScreenIntent.FileSelected(it))
             }
         }
     )
 
     val pickFileAction = {
-        // Send PickFileClicked intent
         onIntent(WaveScreenIntent.PickFileClicked)
         filePickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav"))
     }
 
-    // Auto-clear error message after a delay
     viewState.errorMessage?.let { errorMessage ->
         LaunchedEffect(errorMessage) {
-            kotlinx.coroutines.delay(5000L) // Display error for 5 seconds
+            kotlinx.coroutines.delay(5000L)
             onIntent(WaveScreenIntent.ClearErrorMessage)
         }
     }
 
     WaveScreenContent(
-        uiState = viewState, // Pass the viewState parameter
-        onIntent = onIntent, // Pass the onIntent lambda
+        viewState = viewState,
+        onIntent = onIntent,
         pickFileAction = pickFileAction
     )
 }
 
 @Composable
 fun WaveScreenContent(
-    uiState: WaveScreenState,
+    viewState: WaveScreenState,
     onIntent: (WaveScreenIntent) -> Unit,
     pickFileAction: () -> Unit,
 ) {
@@ -88,19 +86,25 @@ fun WaveScreenContent(
         ) {
 
             Text(text = "Waveform Visualizer", style = MaterialTheme.typography.headlineSmall)
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            NormalizationToggle(
-                dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
-                // Send ToggleDynamicNormalization intent
-                onToggle = { onIntent(WaveScreenIntent.ToggleDynamicNormalization) }
-            )
-
             FilePickerBar(
-                fileName = uiState.fileName,
+                fileName = viewState.fileName,
                 onPickFile = pickFileAction
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            NormalizationToggle(
+                dynamicNormalizationEnabled = viewState.dynamicNormalizationEnabled,
+                onToggle = { onIntent(WaveScreenIntent.ToggleDynamicNormalization) }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TargetSegmentsControl(
+                currentTargetSegments = viewState.currentTargetSegments,
+                onIntent = onIntent
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             Box(
                 modifier = Modifier
@@ -122,38 +126,34 @@ fun WaveScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        if (uiState.waveformData != null) {
-                            val currentPositionFraction = if (uiState.totalDurationMillis > 0) {
-                                uiState.currentPositionMillis.toFloat() / uiState.totalDurationMillis.toFloat()
+                        if (viewState.waveformData != null) {
+                            val currentPositionFraction = if (viewState.totalDurationMillis > 0) {
+                                viewState.currentPositionMillis.toFloat() / viewState.totalDurationMillis.toFloat()
                             } else {
                                 0f
                             }
-                            if (uiState.waveformData.isNotEmpty()) {
+                            if (viewState.waveformData.isNotEmpty()) {
                                 WaveformChart(
-                                    waveformData = uiState.waveformData,
+                                    waveformData = viewState.waveformData,
                                     currentPositionFraction = currentPositionFraction,
-                                    dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
+                                    dynamicNormalizationEnabled = viewState.dynamicNormalizationEnabled,
                                     modifier = Modifier.fillMaxSize(),
                                     onSeekIntent = { fraction ->
-                                        onIntent(
-                                            WaveScreenIntent.SeekTo(
-                                                fraction
-                                            )
-                                        )
+                                        onIntent(WaveScreenIntent.SeekTo(fraction))
                                     },
                                 )
-                            } else if (uiState.fileUri != null && !uiState.isLoadingWaveform && !uiState.isLoadingFile) {
+                            } else if (viewState.fileUri != null && !viewState.isLoadingWaveform && !viewState.isLoadingFile) {
                                 Text(
                                     "Waveform data is empty (file might be silent or too short).",
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
-                        } else if (uiState.fileUri != null && !uiState.isLoadingFile && !uiState.isLoadingWaveform) {
+                        } else if (viewState.fileUri != null && !viewState.isLoadingFile && !viewState.isLoadingWaveform) {
                             Text(
                                 "No waveform data to display (select a file).",
                                 style = MaterialTheme.typography.labelMedium
                             )
-                        } else if (!uiState.isLoadingFile && !uiState.isLoadingWaveform) {
+                        } else if (!viewState.isLoadingFile && !viewState.isLoadingWaveform) {
                             Text(
                                 "Select a WAV file to see the waveform.",
                                 style = MaterialTheme.typography.labelMedium
@@ -162,7 +162,7 @@ fun WaveScreenContent(
                     }
                 }
 
-                if (uiState.isLoadingFile || uiState.isLoadingWaveform) {
+                if (viewState.isLoadingFile || viewState.isLoadingWaveform) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -170,25 +170,25 @@ fun WaveScreenContent(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(if (uiState.isLoadingFile) "Loading file..." else "Processing waveform...")
+                        Text(if (viewState.isLoadingFile) "Loading file..." else "Processing waveform...")
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            uiState.fileUri?.let {
+            viewState.fileUri?.let {
                 PlaybackControls(
-                    isPlaying = uiState.isPlaying,
-                    isBuffering = uiState.isLoadingFile || uiState.isLoadingWaveform || uiState.isPlayerLoading,
-                    currentPositionMillis = uiState.currentPositionMillis,
-                    totalDurationMillis = uiState.totalDurationMillis,
+                    isPlaying = viewState.isPlaying,
+                    isBuffering = viewState.isLoadingFile || viewState.isLoadingWaveform || viewState.isPlayerLoading,
+                    currentPositionMillis = viewState.currentPositionMillis,
+                    totalDurationMillis = viewState.totalDurationMillis,
                     onPlayPauseClicked = { onIntent(WaveScreenIntent.PlayPauseClicked) },
                     formatMillis = ::formatMillis,
                 )
             }
 
-            uiState.errorMessage?.let {
+            viewState.errorMessage?.let {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = it,
