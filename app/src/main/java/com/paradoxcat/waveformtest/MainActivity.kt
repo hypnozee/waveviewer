@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
             ParadoxWaveViewerTheme {
                 WaveScreen(
                     viewModel = viewModel,
-                    onEvent = viewModel::onEvent
+                    onIntent = viewModel::processIntent,
                 )
             }
         }

@@ -1,11 +1,11 @@
 package com.paradoxcat.waveformtest.ui.screen
 
 import android.content.res.Configuration
-import androidx.core.net.toUri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.core.net.toUri
 import com.paradoxcat.waveformtest.domain.model.WaveformSegment
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 
@@ -90,7 +90,7 @@ fun WaveScreenVariousStatesPreview(
     ParadoxWaveViewerTheme {
         WaveScreenContent(
             uiState = uiState,
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -102,7 +102,7 @@ fun WaveScreenPreviewInitial() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
             uiState = WaveScreenState(fileName = "No file selected"),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -114,7 +114,7 @@ fun WaveScreenPreviewLoadingFile() {
     ParadoxWaveViewerTheme {
         WaveScreenContent(
             uiState = WaveScreenState(isLoadingFile = true, fileName = "sample.wav"),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -130,7 +130,7 @@ fun WaveScreenPreviewProcessingWaveform() {
                 fileName = "sample.wav",
                 isLoadingWaveform = true
             ),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -149,7 +149,7 @@ fun WaveScreenPreviewDataLoadedPlaying() {
                 currentPositionMillis = 1500,
                 totalDurationMillis = 60000 // 1 minute
             ),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -169,7 +169,7 @@ fun WaveScreenPreviewDataLoadedPausedDynamicNorm() {
                 currentPositionMillis = 30000, // 30 seconds
                 totalDurationMillis = 120000 // 2 minutes
             ),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }
@@ -184,7 +184,7 @@ fun WaveScreenPreviewError() {
                 fileName = "problematic_file.wav",
                 errorMessage = "This is a long and detailed error message to check how it wraps and is displayed on the screen."
             ),
-            onEvent = {},
+            onIntent = {},
             pickFileAction = {}
         )
     }

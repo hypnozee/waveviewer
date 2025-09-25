@@ -8,10 +8,6 @@ import org.koin.android.ext.koin.androidApplication
 import org.koin.dsl.module
 
 val dataModule = module {
-    single<AudioRepository> {
-        AudioRepositoryImpl(androidApplication().contentResolver)
-    }
-    single<AudioPlayer> {
-        AudioPlayerImpl(androidApplication())
-    }
+    single<AudioRepository> { AudioRepositoryImpl(androidApplication().contentResolver) }
+    single<AudioPlayer> { AudioPlayerImpl(androidApplication()) }
 }

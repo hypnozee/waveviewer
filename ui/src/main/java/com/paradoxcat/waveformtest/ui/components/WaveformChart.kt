@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.domain.model.WaveformSegment
-import com.paradoxcat.waveformtest.ui.screen.WaveScreenEvent
 import kotlin.collections.forEachIndexed
 import kotlin.collections.isNotEmpty
 import kotlin.collections.map
@@ -39,7 +38,7 @@ fun WaveformChart(
     currentPositionFraction: Float,
     dynamicNormalizationEnabled: Boolean,
     modifier: Modifier = Modifier,
-    onEvent: (WaveScreenEvent) -> Unit,
+    onSeekIntent: (Float) -> Unit,
     lineColor: Color = MaterialTheme.colorScheme.primary,
     pointColor: Color = MaterialTheme.colorScheme.secondary,
     progressLineColor: Color = MaterialTheme.colorScheme.tertiary,
@@ -83,7 +82,7 @@ fun WaveformChart(
                             val pointX = offset.x
                             val positionFraction =
                                 ((pointX - leftRightPaddingPx) / drawingWidth).coerceIn(0f, 1f)
-                            onEvent(WaveScreenEvent.SeekTo(positionFraction))
+                            onSeekIntent(positionFraction)
                         }
                     },
                     onHorizontalDrag = { change, _ ->
@@ -93,7 +92,7 @@ fun WaveformChart(
                             val pointX = change.position.x
                             val positionFraction =
                                 ((pointX - leftRightPaddingPx) / drawingWidth).coerceIn(0f, 1f)
-                            onEvent(WaveScreenEvent.SeekTo(positionFraction))
+                            onSeekIntent(positionFraction)
                             change.consume()
                         }
                     }

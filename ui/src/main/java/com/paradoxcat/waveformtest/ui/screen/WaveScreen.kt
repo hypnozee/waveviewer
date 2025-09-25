@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +38,7 @@ import java.util.Locale
 @Composable
 fun WaveScreen(
     viewModel: WaveViewModel,
-    onEvent: (WaveScreenEvent) -> Unit,
+    onIntent: (WaveScreenIntent) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -44,19 +46,29 @@ fun WaveScreen(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
             uri?.let {
-                onEvent(WaveScreenEvent.FileSelected(it))
+                // Send FileSelected intent
+                onIntent(WaveScreenIntent.FileSelected(it))
             }
         }
     )
 
     val pickFileAction = {
-        onEvent(WaveScreenEvent.PickFileClicked)
+        // Send PickFileClicked intent
+        onIntent(WaveScreenIntent.PickFileClicked)
         filePickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav"))
+    }
+
+    // Auto-clear error message after a delay
+    uiState.errorMessage?.let {
+        LaunchedEffect(it) {
+            kotlinx.coroutines.delay(5000L) // Display error for 5 seconds
+            onIntent(WaveScreenIntent.ClearErrorMessage)
+        }
     }
 
     WaveScreenContent(
         uiState = uiState,
-        onEvent = onEvent,
+        onIntent = onIntent, // Pass the onIntent lambda
         pickFileAction = pickFileAction
     )
 }
@@ -64,7 +76,7 @@ fun WaveScreen(
 @Composable
 fun WaveScreenContent(
     uiState: WaveScreenState,
-    onEvent: (WaveScreenEvent) -> Unit,
+    onIntent: (WaveScreenIntent) -> Unit,
     pickFileAction: () -> Unit,
 ) {
     Scaffold(
@@ -85,7 +97,8 @@ fun WaveScreenContent(
 
             NormalizationToggle(
                 dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
-                onToggle = { onEvent(WaveScreenEvent.ToggleDynamicNormalization) }
+                // Send ToggleDynamicNormalization intent
+                onToggle = { onIntent(WaveScreenIntent.ToggleDynamicNormalization) }
             )
 
             FilePickerBar(
@@ -125,7 +138,14 @@ fun WaveScreenContent(
                                     currentPositionFraction = currentPositionFraction,
                                     dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
                                     modifier = Modifier.fillMaxSize(),
-                                    onEvent = onEvent,
+                                    // Pass onIntent for WaveformChart
+                                    onSeekIntent = { fraction ->
+                                        onIntent(
+                                            WaveScreenIntent.SeekTo(
+                                                fraction
+                                            )
+                                        )
+                                    },
                                 )
                             } else if (uiState.fileUri != null && !uiState.isLoadingWaveform && !uiState.isLoadingFile) {
                                 Text(
@@ -153,11 +173,8 @@ fun WaveScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-
                         CircularProgressIndicator()
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         Text(if (uiState.isLoadingFile) "Loading file..." else "Processing waveform...")
                     }
                 }
@@ -171,19 +188,19 @@ fun WaveScreenContent(
                     isBuffering = uiState.isLoadingFile || uiState.isLoadingWaveform || uiState.isPlayerLoading,
                     currentPositionMillis = uiState.currentPositionMillis,
                     totalDurationMillis = uiState.totalDurationMillis,
-                    onPlayPauseClicked = { onEvent(WaveScreenEvent.PlayPauseClicked) },
-                    formatMillis = ::formatMillis // Pass the function reference
+                    onPlayPauseClicked = { onIntent(WaveScreenIntent.PlayPauseClicked) },
+                    formatMillis = ::formatMillis,
                 )
             }
 
             uiState.errorMessage?.let {
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
                     text = it,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Button(onClick = { onIntent(WaveScreenIntent.ClearErrorMessage) }) { Text("Dismiss") }
             }
         }
     }
