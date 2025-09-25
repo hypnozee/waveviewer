@@ -111,8 +111,8 @@ object WavStreamProcessor {
             0.0 // Should be caught by validation earlier, but defensive
         }
         return SegmentState(
-            minValues = FloatArray(targetSegments) { Float.POSITIVE_INFINITY },
-            maxValues = FloatArray(targetSegments) { Float.NEGATIVE_INFINITY },
+            minValues = FloatArray(targetSegments) { MAX_16_BIT },
+            maxValues = FloatArray(targetSegments) { - MAX_16_BIT },
             populated = BooleanArray(targetSegments) { false },
             samplesPerSegment = samplesPerSegmentValue
         )

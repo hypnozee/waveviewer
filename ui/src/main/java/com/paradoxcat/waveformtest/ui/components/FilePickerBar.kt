@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,18 +32,19 @@ fun FilePickerBar(
             .fillMaxWidth()
             .clickable(onClick = onPickFile),
         shape = MaterialTheme.shapes.medium,
-        tonalElevation = 2.dp,
+        tonalElevation = 4.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 26.dp, vertical = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.Center
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
@@ -59,13 +58,6 @@ fun FilePickerBar(
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = if (fileName == null) 1 else 2,
                     overflow = TextOverflow.Ellipsis
-                )
-            }
-            IconButton(onClick = onPickFile) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = "Change audio file",
-                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

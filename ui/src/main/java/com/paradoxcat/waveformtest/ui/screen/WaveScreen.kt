@@ -86,24 +86,26 @@ fun WaveScreenContent(
         ) {
 
             Text(text = "Waveform Visualizer", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(16.dp))
 
-            FilePickerBar(
-                fileName = viewState.fileName,
-                onPickFile = pickFileAction
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             NormalizationToggle(
                 dynamicNormalizationEnabled = viewState.dynamicNormalizationEnabled,
                 onToggle = { onIntent(WaveScreenIntent.ToggleDynamicNormalization) }
             )
+
+            FilePickerBar(
+                fileName = viewState.fileName,
+                onPickFile = pickFileAction
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             TargetSegmentsControl(
                 currentTargetSegments = viewState.currentTargetSegments,
                 onIntent = onIntent
             )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Box(
