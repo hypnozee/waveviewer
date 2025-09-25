@@ -3,6 +3,7 @@ package com.paradoxcat.waveformtest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import com.paradoxcat.waveformtest.ui.screen.WaveScreen
 import com.paradoxcat.waveformtest.ui.screen.WaveViewModel
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
@@ -28,7 +29,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ParadoxWaveViewerTheme {
                 WaveScreen(
-                    viewModel = viewModel,
+                    viewState = viewModel.viewStateFlow.collectAsState().value,
                     onIntent = viewModel::processIntent,
                 )
             }

@@ -19,11 +19,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.paradoxcat.waveformtest.ui.components.FilePickerBar
 import com.paradoxcat.waveformtest.ui.components.NormalizationToggle
 import com.paradoxcat.waveformtest.ui.components.PlaybackControls
@@ -37,11 +35,9 @@ import java.util.Locale
  */
 @Composable
 fun WaveScreen(
-    viewModel: WaveViewModel,
+    viewState: WaveScreenState,
     onIntent: (WaveScreenIntent) -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
@@ -59,15 +55,15 @@ fun WaveScreen(
     }
 
     // Auto-clear error message after a delay
-    uiState.errorMessage?.let {
-        LaunchedEffect(it) {
+    viewState.errorMessage?.let { errorMessage ->
+        LaunchedEffect(errorMessage) {
             kotlinx.coroutines.delay(5000L) // Display error for 5 seconds
             onIntent(WaveScreenIntent.ClearErrorMessage)
         }
     }
 
     WaveScreenContent(
-        uiState = uiState,
+        uiState = viewState, // Pass the viewState parameter
         onIntent = onIntent, // Pass the onIntent lambda
         pickFileAction = pickFileAction
     )
@@ -138,7 +134,6 @@ fun WaveScreenContent(
                                     currentPositionFraction = currentPositionFraction,
                                     dynamicNormalizationEnabled = uiState.dynamicNormalizationEnabled,
                                     modifier = Modifier.fillMaxSize(),
-                                    // Pass onIntent for WaveformChart
                                     onSeekIntent = { fraction ->
                                         onIntent(
                                             WaveScreenIntent.SeekTo(
