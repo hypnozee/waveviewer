@@ -9,20 +9,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.domain.model.WaveformSegment
-import kotlin.collections.forEachIndexed
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
-import kotlin.collections.maxOrNull
-import kotlin.collections.minOrNull
 import kotlin.math.abs
-import kotlin.ranges.coerceIn
-import kotlin.to
+
+private const val MIN_AMPLITUDE_RANGE = 0.00001f
 
 /**
  * Chart to see a series of connected points.
@@ -42,32 +37,21 @@ fun WaveformChart(
     lineColor: Color = MaterialTheme.colorScheme.primary,
     pointColor: Color = MaterialTheme.colorScheme.secondary,
     progressLineColor: Color = MaterialTheme.colorScheme.tertiary,
+    strokeWidthDp: Dp = 1.dp,
     pointRadiusDp: Dp = 2.dp,
-    strokeWidthDp: Dp = 1.5.dp,
-    progressLineWidthDp: Dp = 1.5.dp,
-    horizontalPaddin: Dp = 8.dp,
-    verticalPadding: Dp = 8.dp,
+    progressLineWidthDp: Dp = 3.dp,
 ) {
-    // Convert Dp values to Px for accuracy.
-    val leftRightPaddingPx = with(LocalDensity.current) { horizontalPaddin.toPx() }
-    val topBottomPaddingPx = with(LocalDensity.current) { verticalPadding.toPx() }
     val pointRadiusPx = with(LocalDensity.current) { pointRadiusDp.toPx() }
     val strokeWidthPx = with(LocalDensity.current) { strokeWidthDp.toPx() }
     val progressLineWidthPx = with(LocalDensity.current) { progressLineWidthDp.toPx() }
 
     val (overallMinAvg, overallMaxAvg) = remember(waveformData, dynamicNormalizationEnabled) {
-        if (dynamicNormalizationEnabled && waveformData.isNotEmpty()) {
-            val avgAmplitudes = waveformData.map { (it.min + it.max) / 2f }
-            (avgAmplitudes.minOrNull() ?: -1f) to (avgAmplitudes.maxOrNull() ?: 1f)
-        } else {
-            -1f to 1f
-        }
+        calculateAmplitudeRange(waveformData, dynamicNormalizationEnabled)
     }
 
-    var valueRange = overallMaxAvg - overallMinAvg
-    if (valueRange < 0.00001f) { // Avoid division by zero
-        valueRange =
-            0f
+    var amplitudeDisplayRange = overallMaxAvg - overallMinAvg
+    if (amplitudeDisplayRange < MIN_AMPLITUDE_RANGE) { // Avoid division by zero
+        amplitudeDisplayRange = 0f
     }
 
     Canvas(
@@ -76,22 +60,16 @@ fun WaveformChart(
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
-                        val totalCanvasWidth = size.width.toFloat()
-                        val drawingWidth = totalCanvasWidth - 2 * leftRightPaddingPx
-                        if (drawingWidth > 0) {
-                            val pointX = offset.x
+                        if (size.width > 0) {
                             val positionFraction =
-                                ((pointX - leftRightPaddingPx) / drawingWidth).coerceIn(0f, 1f)
+                                (offset.x / size.width).coerceIn(0f, 1f)
                             onSeekIntent(positionFraction)
                         }
                     },
                     onHorizontalDrag = { change, _ ->
-                        val totalCanvasWidth = size.width.toFloat()
-                        val drawingWidth = totalCanvasWidth - 2 * leftRightPaddingPx
-                        if (drawingWidth > 0) {
-                            val pointX = change.position.x
+                        if (size.width > 0) {
                             val positionFraction =
-                                ((pointX - leftRightPaddingPx) / drawingWidth).coerceIn(0f, 1f)
+                                (change.position.x / size.width).coerceIn(0f, 1f)
                             onSeekIntent(positionFraction)
                             change.consume()
                         }
@@ -99,92 +77,121 @@ fun WaveformChart(
                 )
             }
     ) {
-        val totalCanvasWidth = size.width
-        val totalCanvasHeight = size.height
-        val drawingWidth = totalCanvasWidth - 2 * leftRightPaddingPx
-        val drawingHeight = totalCanvasHeight - 2 * topBottomPaddingPx
+        val canvasWidth = size.width
+        val canvasHeight = size.height
 
-        if (drawingWidth <= 0f || drawingHeight <= 0f || waveformData.isEmpty()) {
-            val middleY = totalCanvasHeight / 2f
-            // Draw a horizontal line in the middle as a placeholder.
-            drawLine(
-                color = Color.Gray,
-                start = Offset(leftRightPaddingPx, middleY),
-                end = Offset(totalCanvasWidth - leftRightPaddingPx, middleY),
-                strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-            )
-            if (drawingWidth > 0f && drawingHeight > 0f) {
-                val lineX =
-                    leftRightPaddingPx + (currentPositionFraction.coerceIn(0f, 1f) * drawingWidth)
-                drawLine(
-                    color = progressLineColor,
-                    start = Offset(lineX, topBottomPaddingPx),
-                    end = Offset(lineX, totalCanvasHeight - topBottomPaddingPx),
-                    strokeWidth = progressLineWidthPx
-                )
-            }
-            return@Canvas
-        }
-
-        val numSegments = waveformData.size
-        // Calculate the width for each segment on the canvas.
-        val segmentWidth = if (numSegments > 1) drawingWidth / (numSegments - 1) else drawingWidth
-        val drawingMiddleY =
-            topBottomPaddingPx + drawingHeight / 2f
-        val maxAmplitudePx = drawingHeight / 2f
-
-        var prevX: Float? = null
-        var prevY: Float? = null
-
-        waveformData.forEachIndexed { index, segment ->
-            val currentX =
-                leftRightPaddingPx + (index * segmentWidth)
-
-            val displayAmplitude = if (dynamicNormalizationEnabled) {
-                val valueForDynamicNormalization = (segment.min + segment.max) / 2f
-                if (valueRange == 0f) {
-                    if (overallMinAvg == 0f && overallMaxAvg == 0f) 0f else valueForDynamicNormalization
-                } else {
-                    // Normalize the current segment's average amplitude to the -1f to 1f range.
-                    (((valueForDynamicNormalization - overallMinAvg) / valueRange) * 2f - 1f).coerceIn(
-                        -1f,
-                        1f
-                    )
-                }
-            } else {
-                if (abs(segment.max) >= abs(segment.min)) segment.max else segment.min
-            }
-
-            val currentY = (drawingMiddleY - (displayAmplitude * maxAmplitudePx)).coerceIn(
-                topBottomPaddingPx,
-                totalCanvasHeight - topBottomPaddingPx
-            )
-
-            drawCircle(
-                color = pointColor,
-                radius = pointRadiusPx,
-                center = Offset(currentX, currentY)
-            )
-
-            if (index > 0 && prevX != null && prevY != null) {
-                drawLine(
-                    color = lineColor,
-                    start = Offset(prevX, prevY),
-                    end = Offset(currentX, currentY),
-                    strokeWidth = strokeWidthPx
-                )
-            }
-            prevX = currentX
-            prevY = currentY
-        }
-
-        val lineX = leftRightPaddingPx + (currentPositionFraction.coerceIn(0f, 1f) * drawingWidth)
-        drawLine(
-            color = progressLineColor,
-            start = Offset(lineX, topBottomPaddingPx),
-            end = Offset(lineX, totalCanvasHeight - topBottomPaddingPx),
-            strokeWidth = progressLineWidthPx
+        drawWaveform(
+            waveformData = waveformData,
+            dynamicNormalizationEnabled = dynamicNormalizationEnabled,
+            overallMinAvg = overallMinAvg,
+            amplitudeDisplayRange = amplitudeDisplayRange,
+            canvasWidth = canvasWidth,
+            canvasHeight = canvasHeight,
+            pointColor = pointColor,
+            pointRadiusPx = pointRadiusPx,
+            lineColor = lineColor,
+            strokeWidthPx = strokeWidthPx
         )
+
+        drawProgressLine(
+            canvasWidth,
+            canvasHeight,
+            progressLineColor,
+            currentPositionFraction,
+            progressLineWidthPx
+        )
+    }
+}
+
+private fun DrawScope.drawWaveform(
+    waveformData: List<WaveformSegment>,
+    dynamicNormalizationEnabled: Boolean,
+    overallMinAvg: Float,
+    amplitudeDisplayRange: Float,
+    canvasWidth: Float,
+    canvasHeight: Float,
+    pointColor: Color,
+    pointRadiusPx: Float,
+    lineColor: Color,
+    strokeWidthPx: Float,
+) {
+    val numSegments = waveformData.size
+    val segmentWidth = if (numSegments > 1) canvasWidth / (numSegments - 1) else canvasWidth
+    val drawingMiddleY = canvasHeight / 2f
+    val maxAmplitudePx = canvasHeight / 2f
+
+    var prevX: Float? = null
+    var prevY: Float? = null
+
+    waveformData.forEachIndexed { index, segment ->
+        val currentX = index * segmentWidth
+
+        val displayAmplitude = if (dynamicNormalizationEnabled) {
+            val valueForDynamicNormalization = (segment.min + segment.max) / 2f
+            if (amplitudeDisplayRange == 0f) {
+                if (overallMinAvg == 0f) 0f else valueForDynamicNormalization // overallMaxAvg was overallMinAvg
+            } else {
+                (((valueForDynamicNormalization - overallMinAvg) / amplitudeDisplayRange) * 2f - 1f).coerceIn(
+                    -1f,
+                    1f
+                )
+            }
+        } else {
+            if (abs(segment.max) >= abs(segment.min)) segment.max else segment.min
+        }
+
+        val currentY = (drawingMiddleY - (displayAmplitude * maxAmplitudePx)).coerceIn(
+            0.0f,
+            canvasHeight
+        )
+
+        drawCircle(
+            color = pointColor,
+            radius = pointRadiusPx,
+            center = Offset(currentX, currentY)
+        )
+
+        if (index > 0 && prevX != null && prevY != null) {
+            drawLine(
+                color = lineColor,
+                start = Offset(prevX, prevY),
+                end = Offset(currentX, currentY),
+                strokeWidth = strokeWidthPx
+            )
+        }
+        prevX = currentX
+        prevY = currentY
+    }
+}
+
+private fun DrawScope.drawProgressLine(
+    canvasWidth: Float,
+    canvasHeight: Float,
+    progressLineColor: Color,
+    currentPositionFraction: Float,
+    progressLineWidthPx: Float,
+) {
+    val lineX = (currentPositionFraction.coerceIn(0f, 1f) * canvasWidth)
+    drawLine(
+        color = progressLineColor,
+        start = Offset(lineX, 0.0f),
+        end = Offset(lineX, canvasHeight),
+        strokeWidth = progressLineWidthPx
+    )
+}
+
+/**
+ * Calculates the overall minimum and maximum average amplitudes for the waveform data.
+ *
+ */
+private fun calculateAmplitudeRange(
+    waveformData: List<WaveformSegment>,
+    dynamicNormalizationEnabled: Boolean,
+): Pair<Float, Float> {
+    return if (dynamicNormalizationEnabled && waveformData.isNotEmpty()) {
+        val avgAmplitudes = waveformData.map { (it.min + it.max) / 2f }
+        (avgAmplitudes.minOrNull() ?: -1f) to (avgAmplitudes.maxOrNull() ?: 1f)
+    } else {
+        -1f to 1f
     }
 }
