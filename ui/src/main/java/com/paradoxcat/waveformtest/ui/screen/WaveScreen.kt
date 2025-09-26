@@ -79,7 +79,7 @@ fun WaveScreenContent(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
@@ -94,6 +94,8 @@ fun WaveScreenContent(
                 onToggle = { onIntent(WaveScreenIntent.ToggleDynamicNormalization) }
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             FilePickerBar(
                 fileName = viewState.fileName,
                 onPickFile = pickFileAction
@@ -106,20 +108,18 @@ fun WaveScreenContent(
                 onIntent = onIntent
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .heightIn(min = 150.dp)
-                    .padding(top = 8.dp)
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 1.dp
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Column(
                         modifier = Modifier

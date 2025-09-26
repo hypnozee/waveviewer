@@ -3,9 +3,9 @@ package com.paradoxcat.waveformtest.ui.screen
 import android.net.Uri
 import com.paradoxcat.waveformtest.domain.model.WaveformSegment
 
-const val DEFAULT_TARGET_SEGMENTS = 750
+const val DEFAULT_TARGET_SEGMENTS = 500
 const val MIN_TARGET_SEGMENTS = 50
-const val MAX_TARGET_SEGMENTS = 1500
+const val MAX_TARGET_SEGMENTS = 1000
 
 data class WaveScreenState(
     val isLoadingFile: Boolean = false,
@@ -19,5 +19,5 @@ data class WaveScreenState(
     val totalDurationMillis: Long = 0L,
     val errorMessage: String? = null,
     val dynamicNormalizationEnabled: Boolean = false,
-    val currentTargetSegments: Int = DEFAULT_TARGET_SEGMENTS, // ADDED field
+    val currentTargetSegments: Int = DEFAULT_TARGET_SEGMENTS,
 )

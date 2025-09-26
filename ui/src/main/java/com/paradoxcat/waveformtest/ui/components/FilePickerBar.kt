@@ -2,13 +2,19 @@ package com.paradoxcat.waveformtest.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,40 +31,69 @@ import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 fun FilePickerBar(
     fileName: String?,
     onPickFile: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier
+
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onPickFile),
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surface
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 26.dp, vertical = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+                .weight(1f)
+                .fillMaxHeight()
+                .clickable(onClick = onPickFile),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface,
         ) {
             Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 24.dp)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
-                    contentDescription = if (fileName == null) "Pick audio file" else "Selected file icon",
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+                if (fileName == null) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                        contentDescription = "Pick audio file",
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = fileName?.let { "File: $it" } ?: "Tap to Pick Audio File",
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = if (fileName == null) 1 else 2,
+                    text = fileName ?: "Tap to Pick Audio File",
+                    style = if (fileName != null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        }
+
+        if (fileName != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .clickable(onClick = onPickFile),
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 4.dp,
+                color = MaterialTheme.colorScheme.surface,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 24.dp)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FileOpen,
+                        contentDescription = "Change selected audio file",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
         }
     }
@@ -76,6 +111,9 @@ fun FilePickerBarPreviewNoFile() {
 @Composable
 fun FilePickerBarPreviewFileSelected() {
     ParadoxWaveViewerTheme {
-        FilePickerBar(fileName = "example_long_audio_file_name.wav", onPickFile = {})
+        FilePickerBar(
+            fileName = "example_long_audio_file_name_that_should_be_ellipsized.wav",
+            onPickFile = {}
+        )
     }
 }

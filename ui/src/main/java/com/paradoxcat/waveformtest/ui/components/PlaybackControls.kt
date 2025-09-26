@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,30 +29,38 @@ fun PlaybackControls(
     totalDurationMillis: Long,
     onPlayPauseClicked: () -> Unit,
     formatMillis: (Long) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        FilledTonalButton(
+        Button(
             onClick = onPlayPauseClicked,
             enabled = !isBuffering && totalDurationMillis > 0,
-            shape = MaterialTheme.shapes.medium
+            shape = MaterialTheme.shapes.medium,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play"
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isPlaying) "Pause" else "Play")
-            }
+            PlayPauseButtonContent(isPlaying = isPlaying)
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Position: ${formatMillis(currentPositionMillis)} / ${formatMillis(totalDurationMillis)}",
-            style = MaterialTheme.typography.bodyMedium
+            text = "${formatMillis(currentPositionMillis)} / ${formatMillis(totalDurationMillis)}",
+            style = MaterialTheme.typography.titleMedium
+        )
+    }
+}
+
+@Composable
+private fun PlayPauseButtonContent(isPlaying: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            contentDescription = if (isPlaying) "Pause" else "Play"
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            if (isPlaying) "Pause" else "Play",
+            style = MaterialTheme.typography.titleLarge
         )
     }
 }
@@ -71,8 +79,8 @@ fun PlaybackControlsPreviewPlaying() {
         PlaybackControls(
             isPlaying = true,
             isBuffering = false,
-            currentPositionMillis = 90000, // 01:30
-            totalDurationMillis = 210000, // 03:30
+            currentPositionMillis = 90000,
+            totalDurationMillis = 210000,
             onPlayPauseClicked = {},
             formatMillis = ::previewFormatMillis
         )
@@ -81,13 +89,13 @@ fun PlaybackControlsPreviewPlaying() {
 
 @PreviewLightDark
 @Composable
-fun PlaybackControlsPreviewPaused() {
+fun PlaybackControlsPaused() {
     ParadoxWaveViewerTheme {
         PlaybackControls(
             isPlaying = false,
             isBuffering = false,
             currentPositionMillis = 0,
-            totalDurationMillis = 180000, // 03:00
+            totalDurationMillis = 180000,
             onPlayPauseClicked = {},
             formatMillis = ::previewFormatMillis
         )
@@ -102,7 +110,7 @@ fun PlaybackControlsPreviewBuffering() {
             isPlaying = false,
             isBuffering = true,
             currentPositionMillis = 0,
-            totalDurationMillis = 180000, // 03:00
+            totalDurationMillis = 180000,
             onPlayPauseClicked = {},
             formatMillis = ::previewFormatMillis
         )

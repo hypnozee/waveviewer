@@ -1,10 +1,12 @@
 package com.paradoxcat.waveformtest.ui.components
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -12,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
@@ -24,43 +27,67 @@ fun NormalizationToggle(
 ) {
     Surface(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
                 modifier = Modifier
-                    .clickable { if (dynamicNormalizationEnabled) onToggle() }
-                    .padding(vertical = 4.dp)
+                    .weight(1f)
+                    .selectable(
+                        selected = !dynamicNormalizationEnabled,
+                        onClick = { if (dynamicNormalizationEnabled) onToggle() },
+                        role = Role.RadioButton,
+                        enabled = true
+                    )
+                    .padding(horizontal = 12.dp, vertical = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                RadioButton(
-                    selected = !dynamicNormalizationEnabled,
-                    onClick = { if (dynamicNormalizationEnabled) onToggle() }
+                RadioButtonOption(
+                    text = "True Amplitude",
+                    isSelected = !dynamicNormalizationEnabled
                 )
-                Text("True Amplitude", style = MaterialTheme.typography.bodyMedium)
             }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
                 modifier = Modifier
-                    .clickable { if (!dynamicNormalizationEnabled) onToggle() }
-                    .padding(vertical = 4.dp)
+                    .weight(1f)
+                    .selectable(
+                        selected = dynamicNormalizationEnabled,
+                        onClick = { if (!dynamicNormalizationEnabled) onToggle() },
+                        role = Role.RadioButton,
+                        enabled = true
+                    )
+                    .padding(horizontal = 12.dp, vertical = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                RadioButton(
-                    selected = dynamicNormalizationEnabled,
-                    onClick = { if (!dynamicNormalizationEnabled) onToggle() }
+                RadioButtonOption(
+                    text = "Dynamic Height",
+                    isSelected = dynamicNormalizationEnabled
                 )
-                Text("Dynamic Height", style = MaterialTheme.typography.bodyMedium)
             }
         }
+    }
+}
+
+@Composable
+private fun RadioButtonOption(
+    text: String,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        RadioButton(
+            selected = isSelected,
+            onClick = null
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -79,3 +106,4 @@ fun NormalizationTogglePreviewFillHeight() {
         NormalizationToggle(dynamicNormalizationEnabled = true, onToggle = {})
     }
 }
+

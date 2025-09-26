@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="olive_dark_green">#556B2F</color>
+    <color name="olive_dark_green">#66803E</color>
     <color name="wood_saddle_brown">#8B4513</color>
     <color name="olive_lighter">#939D53</color>
     <color name="wood_beige_light">#F5F5DC</color>
+    <color name="wood_beige_dim">#81D1C7B3</color>
+    <color name="wood_beige_dimmer">#2E755539</color>
     <color name="wood_burlywood">#DEB887</color>
-    <color name="wood_dark_brown">#654321</color>
+    <color name="wood_dark_brown">#493117</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
-    <!-- Dark Side :) -->
     <color name="dark_olive_background">#3A3B32</color>
     <color name="dark_olive_surface">#4A4B42</color>
     <color name="light_beige_text">#E0E0D1</color>
+    <color name="dark_surface_variant_color">#1E1F1A</color>
+    <color name="light_container_color">#F7F7F7</color>
+    <color name="dark_container_color">#52534C</color>
 </resources>
