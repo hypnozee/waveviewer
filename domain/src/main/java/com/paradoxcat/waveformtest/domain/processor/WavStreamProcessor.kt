@@ -45,7 +45,7 @@ object WavStreamProcessor {
             val segmentState = initializeSegmentState(totalExpectedSamples, numSegments)
             val readBuffer = ByteArray(STREAM_READ_BUFFER_SIZE)
             var totalBytesSuccessfullyReadFromStream = 0L
-            var currentOverallSampleIndex = 0L
+            var sampleIndex = 0L
 
             // Main processing loop
             while (totalBytesSuccessfullyReadFromStream < formatInfo.dataChunkDeclaredSize) {
@@ -58,7 +58,7 @@ object WavStreamProcessor {
                 val actualBytesReadThisPass =
                     inputStream.read(readBuffer, 0, bytesToReadForThisPass)
                 if (actualBytesReadThisPass == -1) { // EOF
-                    if (totalBytesSuccessfullyReadFromStream == 0L) { // Simplified EOF check
+                    if (totalBytesSuccessfullyReadFromStream == 0L) {
                         return Result.Error("Reached EOF at the start of the data chunk when data was expected.")
                     }
                     break
@@ -66,11 +66,11 @@ object WavStreamProcessor {
                 if (actualBytesReadThisPass == 0) break
 
                 totalBytesSuccessfullyReadFromStream += actualBytesReadThisPass
-                currentOverallSampleIndex = processSamplesInCurrentBuffer(
+                sampleIndex = processSamplesInCurrentBuffer(
                     readBuffer,
                     actualBytesReadThisPass,
                     segmentState,
-                    currentOverallSampleIndex,
+                    sampleIndex,
                     numSegments,
                 )
 
@@ -78,10 +78,10 @@ object WavStreamProcessor {
             }
 
             val segments = createFinalSegments(segmentState, numSegments)
-            logSegmentPopulationWarnings(segments, segmentState, currentOverallSampleIndex, numSegments)
+            logSegmentPopulationWarnings(segments, segmentState, sampleIndex, numSegments)
 
             val durationMillis =
-                calculateDurationMillis(currentOverallSampleIndex, formatInfo.sampleRate)
+                calculateDurationMillis(sampleIndex, formatInfo.sampleRate)
             return Result.Success(WaveformResultData(segments, durationMillis))
 
         } catch (e: IOException) {
@@ -168,17 +168,17 @@ object WavStreamProcessor {
     private fun logSegmentPopulationWarnings(
         segments: List<WaveformSegment>,
         segmentState: SegmentState,
-        currentOverallSampleIndex: Long,
+        sampleIndex: Long,
         numSegments: Int,
     ) {
-        if (numSegments <= 0 && currentOverallSampleIndex > 0) {
-            println("Warning: Segments number is $numSegments, no segments generated despite processing $currentOverallSampleIndex samples.")
+        if (numSegments <= 0 && sampleIndex > 0) {
+            println("Warning: Segments number is $numSegments, no segments generated despite processing $sampleIndex samples.")
             return
         }
-        if (segments.isNotEmpty() && currentOverallSampleIndex > 0) {
+        if (segments.isNotEmpty() && sampleIndex > 0) {
             val meaningfulSegments = segmentState.populated.count { it }
             if (meaningfulSegments == 0) { // Check numSegments > 0 here
-                println("Warning: No segments meaningfully populated despite processing $currentOverallSampleIndex samples out of $numSegments Segments number.")
+                println("Warning: No segments meaningfully populated despite processing $sampleIndex samples out of $numSegments Segments number.")
             }
         }
     }

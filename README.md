@@ -53,6 +53,8 @@ It uses Koin for dependency injection.
 
 
 # Waveform Generation Strategy
+333Extremely helpful documentation for WAV files that I used:
+https://www.videoproc.com/resource/wav-file.htm
 
 1.  **Header Parsing:**
     *   The `WavHeaderParser` in (`:domain`) first reads the WAV file's header.
