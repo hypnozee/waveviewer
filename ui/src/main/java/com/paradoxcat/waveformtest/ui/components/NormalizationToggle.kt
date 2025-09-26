@@ -93,12 +93,3 @@ fun NormalizationTogglePreviewTrueAmplitude() {
         NormalizationToggle(dynamicNormalizationEnabled = false, onToggle = {})
     }
 }
-
-@PreviewLightDark
-@Composable
-fun NormalizationTogglePreviewFillHeight() {
-    ParadoxWaveViewerTheme {
-        NormalizationToggle(dynamicNormalizationEnabled = true, onToggle = {})
-    }
-}
-

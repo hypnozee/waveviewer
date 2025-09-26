@@ -78,7 +78,7 @@ fun FilePickerBar(
                     .fillMaxHeight()
                     .clickable(onClick = onPickFile),
                 shape = MaterialTheme.shapes.medium,
-                tonalElevation = 2.dp,
+                tonalElevation = 2.dp, // make this button more appealing to press
                 color = MaterialTheme.colorScheme.surface,
             ) {
                 Box(

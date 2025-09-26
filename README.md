@@ -45,11 +45,11 @@ It uses Koin for dependency injection.
 3.  **`:domainModule`**
     *   Define use cases as `factory` instances.
     *   Koin knows how to create a new instance of a use case (like `LoadAudioUseCase`) whenever one is needed.
-    *   These use cases grab what they need from Koin (ex `AudioPlayer`)
+    *   These use cases grab what they need from Koin (ex `AudioPlayer`).
 
-4   **`:uiModule`**
+4.  **`:uiModule`**
     *   We tell Koin how to create our `WaveViewModel`.
-    *   Koin sees that the `WaveViewModel` use cases from the `:domain` module, and it automatically provides them.  Koin sees that the `WaveViewModel` use cases from the `:domain` module, and it automatically provides them.
+    *   Koin sees that the `WaveViewModel` use cases from the `:domain` module, and it automatically provides them.
 
 
 # Waveform Generation Strategy
@@ -60,11 +60,11 @@ It uses Koin for dependency injection.
     *   It extracts metadata like sample rate and the location/size of the audio data.
 2.  **InputStream Processing and Segmentation**: 
     *   The `WavStreamProcessor` in (`:domain`) then processes the raw audio data stream.
-    *   The entire audio stream is conceptually divided into a predefined number of segments (`targetSegments`). 
+    *   The entire audio stream is divided into a number of segments (`numSegments`). 
     *   This number determines the horizontal resolution of the displayed waveform.
     *   The processor reads the audio data sample by sample. 
     *   Each 16-bit sample is normalized to a floating-point value representing its amplitude.
-    *   For each segment, the processor tracks the minimum and maximum normalized amplitudes encountered among all samples that fall within that segment.
+    *   For each segment, the processor tracks the minimum and maximum normalized amplitudes encountered among all samples within that segment.
 3.  **Data for Plotting**: 
     * The output is a list of `WaveformSegment` objects, where each object contains the minimum and maximum amplitude for its corresponding time slice of the audio. 
     * The `:ui` module then uses this data to render the waveform.

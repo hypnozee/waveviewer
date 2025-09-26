@@ -25,12 +25,12 @@ class GetWaveformUseCase(private val audioRepository: AudioRepository) {
 
     suspend operator fun invoke(
         uriString: String,
-        targetSegments: Int,
+        numSegments: Int,
     ): Result<WaveformResultData> {
         return withContext(Dispatchers.IO) {
             try {
-                if (targetSegments <= 0) { // Added validation for early exit
-                    return@withContext Result.Error("Target segments must be greater than 0. Received: $targetSegments")
+                if (numSegments <= 0) { // Added validation for early exit
+                    return@withContext Result.Error("Segments number must be greater than 0. Received: $numSegments")
                 }
                 audioRepository.getAudioFileInputStream(uriString)?.use { inputStream ->
                     // Parse WAV header
@@ -51,8 +51,7 @@ class GetWaveformUseCase(private val audioRepository: AudioRepository) {
                     if (formatInfo.dataChunkDeclaredSize <= 0) {
                         return@withContext Result.Error("Invalid WAV file: Data chunk has no size or is invalid.")
                     }
-
-                    WavStreamProcessor.processStream(inputStream, formatInfo, targetSegments)
+                    WavStreamProcessor.processStream(inputStream, formatInfo, numSegments)
                 }
                     ?: return@withContext Result.Error("Could not open input stream for URI via repository: $uriString")
             } catch (e: IOException) {

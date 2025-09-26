@@ -1,10 +1,11 @@
 package com.paradoxcat.waveformtest.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -12,9 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.domain.model.WaveformSegment
+import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 import kotlin.math.abs
 
 private const val MIN_AMPLITUDE_RANGE = 0.00001f
@@ -25,31 +27,27 @@ private const val MIN_AMPLITUDE_RANGE = 0.00001f
  * You can drag the line to change the play position.
  * Has two view modes:
  * 1. True Amplitude: displays segments based on their value inside [-1.0, +1.0]
- * 2. Dynamic Normalization: scale the average amplitude of segments to fill the height.
+ * 2. Dynamic Normalization: scale the waveform to fill the height based on its actual peaks.
  */
+@SuppressLint("DefaultLocale")
 @Composable
 fun WaveformChart(
     waveformData: List<WaveformSegment>,
-    currentPositionFraction: Float,
+    playProgress: Float,
     dynamicNormalizationEnabled: Boolean,
+    yMin: Float,
+    yMax: Float,
     modifier: Modifier = Modifier,
     onSeekIntent: (Float) -> Unit,
     lineColor: Color = MaterialTheme.colorScheme.primary,
     pointColor: Color = MaterialTheme.colorScheme.secondary,
     progressLineColor: Color = MaterialTheme.colorScheme.tertiary,
-    strokeWidthDp: Dp = 1.dp,
-    pointRadiusDp: Dp = 2.dp,
-    progressLineWidthDp: Dp = 3.dp,
 ) {
-    val pointRadiusPx = with(LocalDensity.current) { pointRadiusDp.toPx() }
-    val strokeWidthPx = with(LocalDensity.current) { strokeWidthDp.toPx() }
-    val progressLineWidthPx = with(LocalDensity.current) { progressLineWidthDp.toPx() }
+    val lineWidth = with(LocalDensity.current) { 1.dp.toPx() }
+    val pointSize = with(LocalDensity.current) { 2.dp.toPx() }
+    val progressLineWidth = with(LocalDensity.current) { 3.dp.toPx() }
 
-    val (overallMinAvg, overallMaxAvg) = remember(waveformData, dynamicNormalizationEnabled) {
-        calculateAmplitudeRange(waveformData, dynamicNormalizationEnabled)
-    }
-
-    var amplitudeDisplayRange = overallMaxAvg - overallMinAvg
+    var amplitudeDisplayRange = yMax - yMin
     if (amplitudeDisplayRange < MIN_AMPLITUDE_RANGE) { // Avoid division by zero
         amplitudeDisplayRange = 0f
     }
@@ -83,22 +81,22 @@ fun WaveformChart(
         drawWaveform(
             waveformData = waveformData,
             dynamicNormalizationEnabled = dynamicNormalizationEnabled,
-            overallMinAvg = overallMinAvg,
+            overallMin = yMin,
             amplitudeDisplayRange = amplitudeDisplayRange,
             canvasWidth = canvasWidth,
             canvasHeight = canvasHeight,
             pointColor = pointColor,
-            pointRadiusPx = pointRadiusPx,
+            pointRadiusPx = pointSize,
             lineColor = lineColor,
-            strokeWidthPx = strokeWidthPx
+            strokeWidthPx = lineWidth
         )
 
         drawProgressLine(
-            canvasWidth,
-            canvasHeight,
-            progressLineColor,
-            currentPositionFraction,
-            progressLineWidthPx
+            canvasWidth = canvasWidth,
+            canvasHeight = canvasHeight,
+            progressLineColor = progressLineColor,
+            currentPositionFraction = playProgress,
+            progressLineWidthPx = progressLineWidth
         )
     }
 }
@@ -106,7 +104,7 @@ fun WaveformChart(
 private fun DrawScope.drawWaveform(
     waveformData: List<WaveformSegment>,
     dynamicNormalizationEnabled: Boolean,
-    overallMinAvg: Float,
+    overallMin: Float,
     amplitudeDisplayRange: Float,
     canvasWidth: Float,
     canvasHeight: Float,
@@ -127,11 +125,12 @@ private fun DrawScope.drawWaveform(
         val currentX = index * segmentWidth
 
         val displayAmplitude = if (dynamicNormalizationEnabled) {
-            val valueForDynamicNormalization = (segment.min + segment.max) / 2f
+            val valueForNormalization =
+                if (abs(segment.max) >= abs(segment.min)) segment.max else segment.min
             if (amplitudeDisplayRange == 0f) {
-                if (overallMinAvg == 0f) 0f else valueForDynamicNormalization // overallMaxAvg was overallMinAvg
+                valueForNormalization
             } else {
-                (((valueForDynamicNormalization - overallMinAvg) / amplitudeDisplayRange) * 2f - 1f).coerceIn(
+                (((valueForNormalization - overallMin) / amplitudeDisplayRange) * 2f - 1f).coerceIn(
                     -1f,
                     1f
                 )
@@ -180,18 +179,26 @@ private fun DrawScope.drawProgressLine(
     )
 }
 
-/**
- * Calculates the overall minimum and maximum average amplitudes for the waveform data.
- *
- */
-private fun calculateAmplitudeRange(
-    waveformData: List<WaveformSegment>,
-    dynamicNormalizationEnabled: Boolean,
-): Pair<Float, Float> {
-    return if (dynamicNormalizationEnabled && waveformData.isNotEmpty()) {
-        val avgAmplitudes = waveformData.map { (it.min + it.max) / 2f }
-        (avgAmplitudes.minOrNull() ?: -1f) to (avgAmplitudes.maxOrNull() ?: 1f)
-    } else {
-        -1f to 1f
+
+@PreviewLightDark
+@Composable
+fun WaveformChartPreview() {
+    ParadoxWaveViewerTheme {
+        val waveformData = listOf(
+            WaveformSegment(0.0f, 0.5f),
+            WaveformSegment(-0.2f, 0.3f),
+            WaveformSegment(0.1f, 0.8f),
+            WaveformSegment(-0.5f, 0.0f),
+            WaveformSegment(0.3f, 0.6f)
+        )
+        WaveformChart(
+            waveformData = waveformData,
+            playProgress = 0.5f,
+            dynamicNormalizationEnabled = true,
+            yMin = -0.5f,
+            yMax = 0.8f,
+            modifier = Modifier.fillMaxSize(),
+            onSeekIntent = {}
+        )
     }
 }

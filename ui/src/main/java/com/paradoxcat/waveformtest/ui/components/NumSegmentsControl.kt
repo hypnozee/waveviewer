@@ -31,38 +31,38 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.paradoxcat.waveformtest.ui.screen.MAX_TARGET_SEGMENTS
-import com.paradoxcat.waveformtest.ui.screen.MIN_TARGET_SEGMENTS
+import com.paradoxcat.waveformtest.ui.screen.MAX_NUM_SEGMENTS
+import com.paradoxcat.waveformtest.ui.screen.MIN_NUM_SEGMENTS
 import com.paradoxcat.waveformtest.ui.screen.WaveScreenIntent
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TargetSegmentsControl(
-    currentTargetSegments: Int,
+fun NumSegmentsControl(
+    currentNumSegments: Int,
     onIntent: (WaveScreenIntent) -> Unit,
 ) {
-    val view = LocalView.current
+    val view = LocalView.current // needed for vibration
     val interactionSource = remember { MutableInteractionSource() }
-    var sliderPosition by remember { mutableFloatStateOf(currentTargetSegments.toFloat()) }
-    var previousRoundedValueForHaptics by remember { mutableIntStateOf(currentTargetSegments) }
-    var isDragging by remember { mutableStateOf(false) }
+    var sliderPosition by remember { mutableFloatStateOf(currentNumSegments.toFloat()) }
+    var currentStepHaptics by remember { mutableIntStateOf(currentNumSegments) }
+    var isDragging by remember { mutableStateOf(false) } // when dragging, we increase text size so we don't need glasses
 
     LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
-            when (interaction) {
+            when (interaction) { // so slider only knows when drag is happening or stopped, couldn't make it intercept thumb press
                 is DragInteraction.Start -> isDragging = true
                 is DragInteraction.Stop -> isDragging = false
             }
         }
     }
 
-    LaunchedEffect(currentTargetSegments) {
-        val newTargetFloat = currentTargetSegments.toFloat()
-        if (sliderPosition != newTargetFloat) {
-            sliderPosition = newTargetFloat
-            previousRoundedValueForHaptics = newTargetFloat.roundToInt()
+    LaunchedEffect(currentNumSegments) {
+        val newNumSegments = currentNumSegments.toFloat()
+        if (sliderPosition != newNumSegments) {
+            sliderPosition = newNumSegments
+            currentStepHaptics = newNumSegments.roundToInt()
         }
     }
 
@@ -81,26 +81,26 @@ fun TargetSegmentsControl(
             val sliderColors = SliderDefaults.colors(
                 thumbColor = Color.Transparent,
                 activeTrackColor = MaterialTheme.colorScheme.secondary,
-                inactiveTrackColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f),
+                inactiveTrackColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
                 activeTickColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f),
-                inactiveTickColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.24f)
+                inactiveTickColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.25f)
             )
 
             Slider(
                 value = sliderPosition,
                 onValueChange = { newValue ->
                     sliderPosition = newValue
-                    val currentRoundedValue = newValue.roundToInt()
-                    if (previousRoundedValueForHaptics != currentRoundedValue) {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        previousRoundedValueForHaptics = currentRoundedValue
+                    val currentStep = newValue.roundToInt()
+                    if (currentStepHaptics != currentStep) {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        currentStepHaptics = currentStep
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                steps = (MAX_TARGET_SEGMENTS - MIN_TARGET_SEGMENTS) / 50 - 1,
-                valueRange = MIN_TARGET_SEGMENTS.toFloat()..MAX_TARGET_SEGMENTS.toFloat(),
+                steps = (MAX_NUM_SEGMENTS - MIN_NUM_SEGMENTS) / 50 - 1,
+                valueRange = MIN_NUM_SEGMENTS.toFloat()..MAX_NUM_SEGMENTS.toFloat(),
                 onValueChangeFinished = {
-                    onIntent(WaveScreenIntent.TargetSegmentsChanged(sliderPosition.roundToInt()))
+                    onIntent(WaveScreenIntent.NumSegmentsChanged(sliderPosition.roundToInt()))
                 },
                 interactionSource = interactionSource,
                 colors = sliderColors,
@@ -112,47 +112,33 @@ fun TargetSegmentsControl(
                     )
                 },
                 thumb = {
-                    CustomSliderThumb(
-                        sliderPosition = sliderPosition,
-                        interactionSource = interactionSource,
-                        isDragging = isDragging
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SliderDefaults.Thumb(
+                            interactionSource = interactionSource,
+                            thumbSize = DpSize(8.dp, 36.dp),
+                        )
+                        Text(
+                            text = sliderPosition.roundToInt().toString(),
+                            style = if (isDragging) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.graphicsLayer {
+                                translationY = -(26.dp.toPx())
+                            }
+                        )
+                    }
                 }
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CustomSliderThumb(
-    sliderPosition: Float,
-    interactionSource: MutableInteractionSource,
-    isDragging: Boolean,
-) {
-    Box(
-        contentAlignment = Alignment.Center
-    ) {
-        SliderDefaults.Thumb(
-            interactionSource = interactionSource,
-            thumbSize = DpSize(8.dp, 36.dp),
-        )
-        Text(
-            text = sliderPosition.roundToInt().toString(),
-            style = if (isDragging) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.graphicsLayer {
-                translationY = -(26.dp.toPx())
-            }
-        )
-    }
-}
-
 @PreviewLightDark
 @Composable
-fun TargetSegmentsControlPreview() {
+fun NumSegmentsControlPreview() {
     ParadoxWaveViewerTheme {
-        TargetSegmentsControl(
-            currentTargetSegments = 650,
+        NumSegmentsControl(
+            currentNumSegments = 650,
             onIntent = {}
         )
     }

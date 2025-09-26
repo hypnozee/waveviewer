@@ -21,12 +21,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.paradoxcat.waveformtest.domain.model.WaveformSegment
 import com.paradoxcat.waveformtest.ui.components.FilePickerBar
 import com.paradoxcat.waveformtest.ui.components.NormalizationToggle
+import com.paradoxcat.waveformtest.ui.components.NumSegmentsControl
 import com.paradoxcat.waveformtest.ui.components.PlaybackControls
-import com.paradoxcat.waveformtest.ui.components.TargetSegmentsControl
 import com.paradoxcat.waveformtest.ui.components.WaveformChart
+import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
+import kotlinx.coroutines.delay
+import java.util.Locale
 
 /**
  * Allows picking an audio file (WAV format),
@@ -54,7 +59,7 @@ fun WaveScreen(
 
     viewState.errorMessage?.let { errorMessage ->
         LaunchedEffect(errorMessage) {
-            kotlinx.coroutines.delay(5000L)
+            delay(5000L)
             onIntent(WaveScreenIntent.ClearErrorMessage)
         }
     }
@@ -79,7 +84,7 @@ fun WaveScreenContent(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
@@ -103,8 +108,8 @@ fun WaveScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            TargetSegmentsControl(
-                currentTargetSegments = viewState.currentTargetSegments,
+            NumSegmentsControl(
+                currentNumSegments = viewState.currentNumSegments,
                 onIntent = onIntent
             )
 
@@ -121,45 +126,73 @@ fun WaveScreenContent(
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        if (viewState.waveformData != null) {
+                    if (viewState.waveformData != null && viewState.waveformData.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
                             val currentPositionFraction = if (viewState.totalDurationMillis > 0) {
                                 viewState.currentPositionMillis.toFloat() / viewState.totalDurationMillis.toFloat()
                             } else {
                                 0f
                             }
-                            if (viewState.waveformData.isNotEmpty()) {
-                                WaveformChart(
-                                    waveformData = viewState.waveformData,
-                                    currentPositionFraction = currentPositionFraction,
-                                    dynamicNormalizationEnabled = viewState.dynamicNormalizationEnabled,
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSeekIntent = { fraction ->
-                                        onIntent(WaveScreenIntent.SeekTo(fraction))
-                                    },
+                            Text(
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                                text = String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    viewState.displayMaxAmplitude
+                                ),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            WaveformChart(
+                                waveformData = viewState.waveformData,
+                                playProgress = currentPositionFraction,
+                                dynamicNormalizationEnabled = viewState.dynamicNormalizationEnabled,
+                                yMin = viewState.displayMinAmplitude,
+                                yMax = viewState.displayMaxAmplitude,
+                                modifier = Modifier
+                                    .weight(1f) // Chart takes available vertical space
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp),
+                                onSeekIntent = { fraction ->
+                                    onIntent(WaveScreenIntent.SeekTo(fraction))
+                                },
+                            )
+                            Text(
+                                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                                text = String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    viewState.displayMinAmplitude
+                                ),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            if (viewState.fileUri == null && !viewState.isLoadingFile && !viewState.isLoadingWaveform) {
+                                Text(
+                                    "Select a WAV file to see the waveform.",
+                                    style = MaterialTheme.typography.labelMedium
                                 )
-                            } else if (viewState.fileUri != null && !viewState.isLoadingWaveform && !viewState.isLoadingFile) {
+                            } else if (viewState.waveformData?.isEmpty() == true && viewState.fileUri != null && !viewState.isLoadingWaveform && !viewState.isLoadingFile) {
                                 Text(
                                     "Waveform data is empty (file might be silent or too short).",
                                     style = MaterialTheme.typography.labelMedium
                                 )
+                            } else if (viewState.waveformData == null && viewState.fileUri != null && !viewState.isLoadingFile && !viewState.isLoadingWaveform) {
+                                Text(
+                                    "No waveform data to display (select a file).",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                             }
-                        } else if (viewState.fileUri != null && !viewState.isLoadingFile && !viewState.isLoadingWaveform) {
-                            Text(
-                                "No waveform data to display (select a file).",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        } else if (!viewState.isLoadingFile && !viewState.isLoadingWaveform) {
-                            Text(
-                                "Select a WAV file to see the waveform.",
-                                style = MaterialTheme.typography.labelMedium
-                            )
                         }
                     }
                 }
@@ -199,5 +232,28 @@ fun WaveScreenContent(
                 Button(onClick = { onIntent(WaveScreenIntent.ClearErrorMessage) }) { Text("Dismiss") }
             }
         }
+    }
+}
+
+@PreviewLightDark
+@Composable
+fun WaveScreenPreviewChart() {
+    ParadoxWaveViewerTheme {
+        val waveformData = listOf(
+            WaveformSegment(0.0f, 0.5f),
+            WaveformSegment(-0.2f, 0.3f),
+            WaveformSegment(0.1f, 0.8f),
+            WaveformSegment(-0.5f, 0.0f),
+        )
+        WaveScreenContent(
+            viewState = WaveScreenState(
+                fileName = "haha.wav",
+                waveformData = waveformData,
+                displayMinAmplitude = -1.0f,
+                displayMaxAmplitude = 1.0f
+            ),
+            onIntent = {},
+            pickFileAction = {}
+        )
     }
 }

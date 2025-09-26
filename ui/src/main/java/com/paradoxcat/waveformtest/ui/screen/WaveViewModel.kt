@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.paradoxcat.waveformtest.domain.core.Result
 import com.paradoxcat.waveformtest.domain.model.WaveformResultData
+import com.paradoxcat.waveformtest.domain.model.WaveformSegment
 import com.paradoxcat.waveformtest.domain.player.usecase.LoadAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.ObservePlaybackStateUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.PauseAudioUseCase
@@ -63,7 +64,7 @@ class WaveViewModel(
                     if (previousIsPlaying && !newIsPlaying && resolvedTotalDuration > 0 &&
                         abs(playbackState.currentPositionMillis - resolvedTotalDuration) < 500
                     ) {
-                        newCurrentPositionMillis = 0L // Reset to start
+                        newCurrentPositionMillis = 0L
                     }
 
                     previousIsPlaying = newIsPlaying
@@ -82,12 +83,29 @@ class WaveViewModel(
         }
     }
 
+    private fun calculateDisplayAmplitudeRange(
+        waveformData: List<WaveformSegment>?,
+        dynamicNormalizationEnabled: Boolean
+    ): Pair<Float, Float> {
+        return if (dynamicNormalizationEnabled && waveformData != null && waveformData.isNotEmpty()) {
+            val trueMin = waveformData.minOfOrNull { it.min } ?: -1f
+            val trueMax = waveformData.maxOfOrNull { it.max } ?: 1f
+            trueMin to trueMax
+        } else {
+            -1f to 1f
+        }
+    }
+
     fun processIntent(intent: WaveScreenIntent) {
         when (intent) {
             is WaveScreenIntent.PickFileClicked -> {
                 _viewState.update {
+                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(null, it.dynamicNormalizationEnabled)
                     it.copy(
-                        errorMessage = null // Clear previous errors
+                        errorMessage = null,
+                        waveformData = null,
+                        displayMinAmplitude = minAmp,
+                        displayMaxAmplitude = maxAmp
                     )
                 }
             }
@@ -95,9 +113,10 @@ class WaveViewModel(
             is WaveScreenIntent.FileSelected -> {
                 val selectedUri = intent.uri
                 val selectedUriString = selectedUri.toString()
-                val segmentsToProcess = _viewState.value.currentTargetSegments
+                val segmentsToProcess = _viewState.value.currentNumSegments
 
-                _viewState.update {
+                _viewState.update { // Initial update before launching coroutine
+                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(null, it.dynamicNormalizationEnabled)
                     it.copy(
                         fileUri = selectedUri,
                         fileName = null,
@@ -111,6 +130,8 @@ class WaveViewModel(
                         isPlaying = false,
                         isLoadingWaveform = true,
                         isPlayerLoading = true,
+                        displayMinAmplitude = minAmp,
+                        displayMaxAmplitude = maxAmp
                     )
                 }
 
@@ -124,55 +145,52 @@ class WaveViewModel(
                                 is Result.Success -> {
                                     _viewState.update { it.copy(fileName = detailsResult.data.fileName) }
                                 }
-
                                 is Result.Error -> {
                                     _viewState.update { state ->
                                         val currentError = state.errorMessage
                                         val newError = detailsResult.message
                                         state.copy(
-                                            errorMessage = if (currentError != null && !currentError.contains(
-                                                    newError
-                                                )
-                                            ) "$currentError\n$newError" else newError
+                                            errorMessage = if (currentError != null && !currentError.contains(newError)) "$currentError\n$newError" else newError
                                         )
                                     }
                                 }
                             }
                         }
-                        // Always fetch with current target segments. Cache will be updated.
+
                         when (val waveformResult =
                             getWaveformUseCase(selectedUriString, segmentsToProcess)) {
                             is Result.Success -> {
-                                waveformCache[selectedUriString] =
-                                    waveformResult.data // Update cache
+                                waveformCache[selectedUriString] = waveformResult.data
                                 _viewState.update { state ->
                                     val newTotalDuration = if (state.totalDurationMillis == 0L) waveformResult.data.durationMillis.toLong() else state.totalDurationMillis
+                                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(waveformResult.data.waveformSegments, state.dynamicNormalizationEnabled)
                                     state.copy(
                                         waveformData = waveformResult.data.waveformSegments,
                                         totalDurationMillis = newTotalDuration,
-                                        totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration)
+                                        totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration),
+                                        displayMinAmplitude = minAmp,
+                                        displayMaxAmplitude = maxAmp
                                     )
                                 }
                             }
-
                             is Result.Error -> {
                                 _viewState.update { state ->
                                     val currentError = state.errorMessage
                                     val newError = waveformResult.message
                                     state.copy(
-                                        errorMessage = if (currentError != null && !currentError.contains(
-                                                newError
-                                            )
-                                        ) "$currentError\n$newError" else newError
+                                        errorMessage = if (currentError != null && !currentError.contains(newError)) "$currentError\n$newError" else newError
                                     )
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        _viewState.update {
-                            it.copy(
+                        _viewState.update { state ->
+                            val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(state.waveformData, state.dynamicNormalizationEnabled)
+                            state.copy(
                                 errorMessage = "An unexpected error occurred: ${e.message}",
-                                isPlayerLoading = false
+                                isPlayerLoading = false,
+                                displayMinAmplitude = minAmp,
+                                displayMaxAmplitude = maxAmp
                             )
                         }
                     } finally {
@@ -181,16 +199,18 @@ class WaveViewModel(
                 }
             }
 
-            is WaveScreenIntent.TargetSegmentsChanged -> {
-                val newSegmentCount =
-                    intent.newSegmentCount.coerceIn(MIN_TARGET_SEGMENTS, MAX_TARGET_SEGMENTS)
+            is WaveScreenIntent.NumSegmentsChanged -> {
+                val newNumSegments = intent.newNumber.coerceIn(MIN_NUM_SEGMENTS, MAX_NUM_SEGMENTS)
                 val currentFileUri = _viewState.value.fileUri
 
                 _viewState.update {
+                     val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(if (currentFileUri != null) null else it.waveformData, it.dynamicNormalizationEnabled)
                     it.copy(
-                        currentTargetSegments = newSegmentCount,
+                        currentNumSegments = newNumSegments,
                         isLoadingWaveform = if (currentFileUri != null) true else it.isLoadingWaveform,
-                        waveformData = if (currentFileUri != null) null else it.waveformData 
+                        waveformData = if (currentFileUri != null) null else it.waveformData,
+                        displayMinAmplitude = minAmp,
+                        displayMaxAmplitude = maxAmp
                     )
                 }
 
@@ -199,45 +219,60 @@ class WaveViewModel(
                     viewModelScope.launch {
                         try {
                             when (val waveformResult =
-                                getWaveformUseCase(currentFileUriString, newSegmentCount)) {
+                                getWaveformUseCase(currentFileUriString, newNumSegments)) {
                                 is Result.Success -> {
-                                    waveformCache[currentFileUriString] =
-                                        waveformResult.data 
+                                    waveformCache[currentFileUriString] = waveformResult.data
                                     _viewState.update { state ->
                                         val newTotalDuration = if (state.totalDurationMillis == 0L || waveformCache[currentFileUriString]?.durationMillis?.toLong() != state.totalDurationMillis) {
                                             waveformResult.data.durationMillis.toLong()
                                         } else {
                                             state.totalDurationMillis
                                         }
+                                        val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(waveformResult.data.waveformSegments, state.dynamicNormalizationEnabled)
                                         state.copy(
                                             waveformData = waveformResult.data.waveformSegments,
                                             totalDurationMillis = newTotalDuration,
-                                            totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration)
+                                            totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration),
+                                            displayMinAmplitude = minAmp,
+                                            displayMaxAmplitude = maxAmp
                                         )
                                     }
                                 }
-
                                 is Result.Error -> {
                                     _viewState.update { state ->
                                         val currentError = state.errorMessage
                                         val newError = waveformResult.message
                                         state.copy(
-                                            errorMessage = if (currentError != null && !currentError.contains(
-                                                    newError
-                                                )
-                                            ) "$currentError\n$newError" else newError
+                                            errorMessage = if (currentError != null && !currentError.contains(newError)) "$currentError\n$newError" else newError
                                         )
                                     }
                                 }
                             }
                         } catch (e: Exception) {
-                            _viewState.update {
-                                it.copy(errorMessage = "Error re-processing waveform: ${e.message}")
+                            _viewState.update { state ->
+                                val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(state.waveformData, state.dynamicNormalizationEnabled)
+                                state.copy(
+                                    errorMessage = "Error re-processing waveform: ${e.message}",
+                                    displayMinAmplitude = minAmp,
+                                    displayMaxAmplitude = maxAmp
+                                )
                             }
                         } finally {
                             _viewState.update { it.copy(isLoadingWaveform = false) }
                         }
                     }
+                }
+            }
+
+            is WaveScreenIntent.ToggleDynamicNormalization -> {
+                _viewState.update { currentState ->
+                    val newNormalizationState = !currentState.dynamicNormalizationEnabled
+                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(currentState.waveformData, newNormalizationState)
+                    currentState.copy(
+                        dynamicNormalizationEnabled = newNormalizationState,
+                        displayMinAmplitude = minAmp,
+                        displayMaxAmplitude = maxAmp
+                    )
                 }
             }
 
@@ -247,7 +282,6 @@ class WaveViewModel(
                 } else {
                     if (_viewState.value.fileUri != null) {
                         if (!_viewState.value.isPlayerLoading) {
-                            // If at the end, restart playback
                             if (_viewState.value.totalDurationMillis > 0 && abs(_viewState.value.currentPositionMillis - _viewState.value.totalDurationMillis) < 500) {
                                 seekAudioUseCase(0L)
                             }
@@ -267,10 +301,6 @@ class WaveViewModel(
                     val newPosition = (totalDuration * intent.positionFraction).toLong()
                     seekAudioUseCase(newPosition)
                 }
-            }
-
-            is WaveScreenIntent.ToggleDynamicNormalization -> {
-                _viewState.update { it.copy(dynamicNormalizationEnabled = !it.dynamicNormalizationEnabled) }
             }
 
             is WaveScreenIntent.ClearErrorMessage -> {
