@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
@@ -40,8 +39,6 @@ fun NormalizationToggle(
                     .selectable(
                         selected = !dynamicNormalizationEnabled,
                         onClick = { if (dynamicNormalizationEnabled) onToggle() },
-                        role = Role.RadioButton,
-                        enabled = true
                     )
                     .padding(horizontal = 12.dp, vertical = 24.dp),
                 contentAlignment = Alignment.Center
@@ -57,8 +54,6 @@ fun NormalizationToggle(
                     .selectable(
                         selected = dynamicNormalizationEnabled,
                         onClick = { if (!dynamicNormalizationEnabled) onToggle() },
-                        role = Role.RadioButton,
-                        enabled = true
                     )
                     .padding(horizontal = 12.dp, vertical = 24.dp),
                 contentAlignment = Alignment.Center

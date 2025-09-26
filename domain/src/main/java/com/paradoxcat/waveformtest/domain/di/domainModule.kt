@@ -9,6 +9,7 @@ import com.paradoxcat.waveformtest.domain.player.usecase.ReleasePlayerUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.SeekAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.StopAudioUseCase
 import com.paradoxcat.waveformtest.domain.repository.AudioRepository
+import com.paradoxcat.waveformtest.domain.usecase.MillisToDigitalClockUseCase
 import com.paradoxcat.waveformtest.domain.usecase.GetAudioTrackDetailsUseCase
 import com.paradoxcat.waveformtest.domain.usecase.GetWaveformUseCase
 import org.koin.dsl.module
@@ -23,4 +24,5 @@ val domainModule = module {
     factory { ReleasePlayerUseCase(audioPlayer = get<AudioPlayer>()) }
     factory { GetWaveformUseCase(audioRepository = get<AudioRepository>()) }
     factory { GetAudioTrackDetailsUseCase(audioRepository = get<AudioRepository>()) }
+    factory { MillisToDigitalClockUseCase() }
 }

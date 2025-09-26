@@ -17,6 +17,8 @@ data class WaveScreenState(
     val isPlaying: Boolean = false,
     val currentPositionMillis: Long = 0L,
     val totalDurationMillis: Long = 0L,
+    val currentAudioPosition: String = "00:00",
+    val totalAudioDuration: String = "00:00",
     val errorMessage: String? = null,
     val dynamicNormalizationEnabled: Boolean = false,
     val currentTargetSegments: Int = DEFAULT_TARGET_SEGMENTS,

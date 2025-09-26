@@ -15,20 +15,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.paradoxcat.waveformtest.ui.theme.ParadoxWaveViewerTheme
-import java.util.Locale
 
 @Composable
 fun PlaybackControls(
     isPlaying: Boolean,
     isBuffering: Boolean,
-    currentPositionMillis: Long,
-    totalDurationMillis: Long,
+    currentAudioPosition: String,
+    totalAudioDuration: String,
     onPlayPauseClicked: () -> Unit,
-    formatMillis: (Long) -> String,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -37,14 +34,14 @@ fun PlaybackControls(
     ) {
         Button(
             onClick = onPlayPauseClicked,
-            enabled = !isBuffering && totalDurationMillis > 0,
+            enabled = !isBuffering && totalAudioDuration != "00:00",
             shape = MaterialTheme.shapes.medium,
         ) {
             PlayPauseButtonContent(isPlaying = isPlaying)
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "${formatMillis(currentPositionMillis)} / ${formatMillis(totalDurationMillis)}",
+            text = "$currentAudioPosition / $totalAudioDuration",
             style = MaterialTheme.typography.titleMedium
         )
     }
@@ -65,24 +62,16 @@ private fun PlayPauseButtonContent(isPlaying: Boolean) {
     }
 }
 
-private fun previewFormatMillis(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
-}
-
-@Preview(showBackground = true, name = "Playback Controls - Playing")
+@PreviewLightDark
 @Composable
 fun PlaybackControlsPreviewPlaying() {
     ParadoxWaveViewerTheme {
         PlaybackControls(
             isPlaying = true,
             isBuffering = false,
-            currentPositionMillis = 90000,
-            totalDurationMillis = 210000,
-            onPlayPauseClicked = {},
-            formatMillis = ::previewFormatMillis
+            currentAudioPosition = "01:30",
+            totalAudioDuration = "03:30",
+            onPlayPauseClicked = {}
         )
     }
 }
@@ -94,10 +83,9 @@ fun PlaybackControlsPaused() {
         PlaybackControls(
             isPlaying = false,
             isBuffering = false,
-            currentPositionMillis = 0,
-            totalDurationMillis = 180000,
-            onPlayPauseClicked = {},
-            formatMillis = ::previewFormatMillis
+            currentAudioPosition = "00:00",
+            totalAudioDuration = "03:00",
+            onPlayPauseClicked = {}
         )
     }
 }
@@ -109,10 +97,9 @@ fun PlaybackControlsPreviewBuffering() {
         PlaybackControls(
             isPlaying = false,
             isBuffering = true,
-            currentPositionMillis = 0,
-            totalDurationMillis = 180000,
-            onPlayPauseClicked = {},
-            formatMillis = ::previewFormatMillis
+            currentAudioPosition = "00:00",
+            totalAudioDuration = "03:00",
+            onPlayPauseClicked = {}
         )
     }
 }

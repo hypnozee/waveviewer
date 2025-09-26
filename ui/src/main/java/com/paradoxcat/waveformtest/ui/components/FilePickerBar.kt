@@ -66,7 +66,7 @@ fun FilePickerBar(
                     text = fileName ?: "Tap to Pick Audio File",
                     style = if (fileName != null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.MiddleEllipsis
                 )
             }
         }

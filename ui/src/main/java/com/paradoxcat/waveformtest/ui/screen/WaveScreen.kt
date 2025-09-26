@@ -27,7 +27,6 @@ import com.paradoxcat.waveformtest.ui.components.NormalizationToggle
 import com.paradoxcat.waveformtest.ui.components.PlaybackControls
 import com.paradoxcat.waveformtest.ui.components.TargetSegmentsControl
 import com.paradoxcat.waveformtest.ui.components.WaveformChart
-import java.util.Locale
 
 /**
  * Allows picking an audio file (WAV format),
@@ -73,6 +72,7 @@ fun WaveScreenContent(
     onIntent: (WaveScreenIntent) -> Unit,
     pickFileAction: () -> Unit,
 ) {
+
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
@@ -183,10 +183,9 @@ fun WaveScreenContent(
                 PlaybackControls(
                     isPlaying = viewState.isPlaying,
                     isBuffering = viewState.isLoadingFile || viewState.isLoadingWaveform || viewState.isPlayerLoading,
-                    currentPositionMillis = viewState.currentPositionMillis,
-                    totalDurationMillis = viewState.totalDurationMillis,
+                    currentAudioPosition = viewState.currentAudioPosition,
+                    totalAudioDuration = viewState.totalAudioDuration,
                     onPlayPauseClicked = { onIntent(WaveScreenIntent.PlayPauseClicked) },
-                    formatMillis = ::formatMillis,
                 )
             }
 
@@ -201,11 +200,4 @@ fun WaveScreenContent(
             }
         }
     }
-}
-
-fun formatMillis(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }

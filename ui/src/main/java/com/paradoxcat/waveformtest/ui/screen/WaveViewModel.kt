@@ -11,12 +11,14 @@ import com.paradoxcat.waveformtest.domain.player.usecase.PlayAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.ReleasePlayerUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.SeekAudioUseCase
 import com.paradoxcat.waveformtest.domain.player.usecase.StopAudioUseCase
+import com.paradoxcat.waveformtest.domain.usecase.MillisToDigitalClockUseCase
 import com.paradoxcat.waveformtest.domain.usecase.GetAudioTrackDetailsUseCase
 import com.paradoxcat.waveformtest.domain.usecase.GetWaveformUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class WaveViewModel(
     private val getWaveformUseCase: GetWaveformUseCase,
@@ -28,6 +30,7 @@ class WaveViewModel(
     private val stopAudioUseCase: StopAudioUseCase,
     private val observePlaybackStateUseCase: ObservePlaybackStateUseCase,
     private val releasePlayerUseCase: ReleasePlayerUseCase,
+    private val millisToDigitalClockUseCase: MillisToDigitalClockUseCase
 ) : ViewModel() {
 
     private val _viewState =
@@ -38,6 +41,7 @@ class WaveViewModel(
 
     init {
         viewModelScope.launch {
+            var previousIsPlaying = false
             observePlaybackStateUseCase().collect { playbackState ->
                 _viewState.update { currentState ->
                     val latestErrorMessage = playbackState.error ?: currentState.errorMessage
@@ -51,11 +55,26 @@ class WaveViewModel(
                         } else {
                             playbackState.totalDurationMillis
                         }
+
+                    var newCurrentPositionMillis = playbackState.currentPositionMillis
+                    val newIsPlaying = playbackState.isPlaying
+
+                    // Check for playback completion
+                    if (previousIsPlaying && !newIsPlaying && resolvedTotalDuration > 0 &&
+                        abs(playbackState.currentPositionMillis - resolvedTotalDuration) < 500
+                    ) {
+                        newCurrentPositionMillis = 0L // Reset to start
+                    }
+
+                    previousIsPlaying = newIsPlaying
+
                     currentState.copy(
                         isPlayerLoading = playbackState.isLoading,
-                        isPlaying = playbackState.isPlaying,
-                        currentPositionMillis = playbackState.currentPositionMillis,
+                        isPlaying = newIsPlaying,
+                        currentPositionMillis = newCurrentPositionMillis,
                         totalDurationMillis = resolvedTotalDuration,
+                        currentAudioPosition = millisToDigitalClockUseCase(newCurrentPositionMillis),
+                        totalAudioDuration = millisToDigitalClockUseCase(resolvedTotalDuration),
                         errorMessage = if (playbackState.error != null) latestErrorMessage else currentState.errorMessage
                     )
                 }
@@ -82,14 +101,16 @@ class WaveViewModel(
                     it.copy(
                         fileUri = selectedUri,
                         fileName = null,
-                        isLoadingFile = false, // File selection itself is done
-                        waveformData = null,   // Clear old waveform
+                        isLoadingFile = false,
+                        waveformData = null,
                         errorMessage = null,
                         totalDurationMillis = 0L,
                         currentPositionMillis = 0L,
+                        currentAudioPosition = millisToDigitalClockUseCase(0L),
+                        totalAudioDuration = millisToDigitalClockUseCase(0L),
                         isPlaying = false,
-                        isLoadingWaveform = true, // Start loading waveform
-                        isPlayerLoading = true    // Start loading player
+                        isLoadingWaveform = true,
+                        isPlayerLoading = true,
                     )
                 }
 
@@ -125,9 +146,11 @@ class WaveViewModel(
                                 waveformCache[selectedUriString] =
                                     waveformResult.data // Update cache
                                 _viewState.update { state ->
+                                    val newTotalDuration = if (state.totalDurationMillis == 0L) waveformResult.data.durationMillis.toLong() else state.totalDurationMillis
                                     state.copy(
                                         waveformData = waveformResult.data.waveformSegments,
-                                        totalDurationMillis = if (state.totalDurationMillis == 0L) waveformResult.data.durationMillis.toLong() else state.totalDurationMillis,
+                                        totalDurationMillis = newTotalDuration,
+                                        totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration)
                                     )
                                 }
                             }
@@ -166,9 +189,8 @@ class WaveViewModel(
                 _viewState.update {
                     it.copy(
                         currentTargetSegments = newSegmentCount,
-                        // If a file is loaded, set loading state for waveform
                         isLoadingWaveform = if (currentFileUri != null) true else it.isLoadingWaveform,
-                        waveformData = if (currentFileUri != null) null else it.waveformData // Clear old waveform if reprocessing
+                        waveformData = if (currentFileUri != null) null else it.waveformData 
                     )
                 }
 
@@ -176,21 +198,21 @@ class WaveViewModel(
                     val currentFileUriString = currentFileUri.toString()
                     viewModelScope.launch {
                         try {
-                            // Re-process waveform with new segment count
                             when (val waveformResult =
                                 getWaveformUseCase(currentFileUriString, newSegmentCount)) {
                                 is Result.Success -> {
                                     waveformCache[currentFileUriString] =
-                                        waveformResult.data // Update cache
+                                        waveformResult.data 
                                     _viewState.update { state ->
+                                        val newTotalDuration = if (state.totalDurationMillis == 0L || waveformCache[currentFileUriString]?.durationMillis?.toLong() != state.totalDurationMillis) {
+                                            waveformResult.data.durationMillis.toLong()
+                                        } else {
+                                            state.totalDurationMillis
+                                        }
                                         state.copy(
                                             waveformData = waveformResult.data.waveformSegments,
-                                            // Update duration from new processing if it was from cache or zero
-                                            totalDurationMillis = if (state.totalDurationMillis == 0L || waveformCache[currentFileUriString]?.durationMillis?.toLong() != state.totalDurationMillis) {
-                                                waveformResult.data.durationMillis.toLong()
-                                            } else {
-                                                state.totalDurationMillis
-                                            }
+                                            totalDurationMillis = newTotalDuration,
+                                            totalAudioDuration = millisToDigitalClockUseCase(newTotalDuration)
                                         )
                                     }
                                 }
@@ -225,6 +247,10 @@ class WaveViewModel(
                 } else {
                     if (_viewState.value.fileUri != null) {
                         if (!_viewState.value.isPlayerLoading) {
+                            // If at the end, restart playback
+                            if (_viewState.value.totalDurationMillis > 0 && abs(_viewState.value.currentPositionMillis - _viewState.value.totalDurationMillis) < 500) {
+                                seekAudioUseCase(0L)
+                            }
                             playAudioUseCase()
                         } else {
                             _viewState.update { it.copy(errorMessage = "Player is still loading the audio.") }
