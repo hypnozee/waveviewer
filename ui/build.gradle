@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'com.waveformtest.ui'
+    namespace 'com.waveform.ui'
     compileSdk = 36
 
     defaultConfig {
@@ -42,4 +42,5 @@ dependencies {
 
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
+    testImplementation libs.junit
 }

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'com.waveformtest'
+    namespace 'com.waveform'
     compileSdk = 36
 
     defaultConfig {
@@ -33,6 +33,11 @@ android {
     buildFeatures {
         compose true
         buildConfig true
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 }
 
@@ -66,4 +71,10 @@ dependencies {
 
     testImplementation libs.junit
     testImplementation libs.mockito.core
+    testImplementation libs.mockito.kotlin
+    testImplementation libs.mockito.inline
+    testImplementation libs.robolectric
+    testImplementation libs.androidx.ui.test.junit4
+    testImplementation libs.koin.test
+    testImplementation libs.koin.test.junit4
 }
