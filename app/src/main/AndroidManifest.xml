@@ -15,10 +15,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ParadoxWaveViewer">
+        android:theme="@style/Theme.WaveViewer">
 
         <activity
-            android:name="com.paradoxcat.waveformtest.MainActivity"
+            android:name="com.waveformtest.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

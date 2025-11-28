@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.ParadoxWaveViewer" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.WaveViewer" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/olive_lighter</item>
         <item name="colorPrimaryVariant">@color/olive_dark_green</item>
         <item name="colorOnPrimary">@color/black</item>

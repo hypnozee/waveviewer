@@ -1,4 +1,4 @@
-# ParadoxWaveViewer
+# WaveViewer
 
 **Future improvements could contain, but not be limited to:**
 * Supporting more .wav subformats

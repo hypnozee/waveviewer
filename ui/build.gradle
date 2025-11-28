@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'com.paradoxcat.waveformtest.ui'
+    namespace 'com.waveformtest.ui'
     compileSdk = 36
 
     defaultConfig {

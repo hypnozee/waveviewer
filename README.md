@@ -1,4 +1,4 @@
-# ParadoxWaveViewer
+# WaveViewer
 
 This Application aims to read .wav audio files from storage and display their waveform.
 It will do so in a discrete signal processing manner.
