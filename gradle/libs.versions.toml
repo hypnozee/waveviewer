@@ -1,14 +1,14 @@
 [versions]
-kotlinPluginCompose = "2.2.20"
+kotlinPluginCompose = "2.2.21"
 coreKtx = "1.17.0"
 coroutinesAndroid = "1.10.2"
 coroutinesCore = "1.10.2"
 mockitoCore = "5.20.0"
-mockitoKotlin = "6.0.0"
+mockitoKotlin = "6.1.0"
 
-composeBom = "2025.09.00"
-activityCompose = "1.11.0"
-lifecycle = "2.9.4"
+composeBom = "2025.11.01"
+activityCompose = "1.12.0"
+lifecycle = "2.10.0"
 
 junit = "4.13.2"
 material = "1.13.0"
