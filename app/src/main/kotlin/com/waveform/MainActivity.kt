@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: WaveViewModel by viewModel()
 
     /**
-     * Setup the content view of the activity.
+     * Set up the content view of the activity.
      * Using a nice [WaveViewerTheme] displaying [WaveScreen] controlled by [viewModel]
      */
     override fun onCreate(savedInstanceState: Bundle?) {
