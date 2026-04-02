@@ -16,13 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.waveform.ui.theme.WaveViewerTheme
+import java.util.Locale
 
 @Composable
 fun PlaybackControls(
     isPlaying: Boolean,
     isBuffering: Boolean,
-    currentAudioPosition: String,
-    totalAudioDuration: String,
+    currentPositionMillis: Long,
+    totalDurationMillis: Long,
     onPlayPauseClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -32,7 +33,7 @@ fun PlaybackControls(
     ) {
         Button(
             onClick = onPlayPauseClicked,
-            enabled = !isBuffering && totalAudioDuration != "00:00",
+            enabled = !isBuffering && totalDurationMillis > 0,
             shape = MaterialTheme.shapes.medium,
         ) {
             Icon(
@@ -42,10 +43,18 @@ fun PlaybackControls(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "$currentAudioPosition / $totalAudioDuration",
+            text = "${formatMillis(currentPositionMillis)} / ${formatMillis(totalDurationMillis)}",
             style = MaterialTheme.typography.titleMedium
         )
     }
+}
+
+private fun formatMillis(millis: Long): String {
+    if (millis <= 0) return "00:00"
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }
 
 @PreviewLightDark
@@ -55,8 +64,8 @@ fun PlaybackControlsPaused() {
         PlaybackControls(
             isPlaying = false,
             isBuffering = false,
-            currentAudioPosition = "00:00",
-            totalAudioDuration = "03:00",
+            currentPositionMillis = 0L,
+            totalDurationMillis = 180_000L,
             onPlayPauseClicked = {}
         )
     }

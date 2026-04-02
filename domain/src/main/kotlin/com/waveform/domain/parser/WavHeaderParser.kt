@@ -8,13 +8,15 @@ import java.nio.ByteOrder
 
 /**
  * A helper for reading the header of WAV audio files.
- * It looks for important parts like "RIFF", "WAVE", "fmt ", and "data"
+ * It looks for important parts like "RIFF", "WAVE", "fmt", and "data"
  * This parser is specifically configured to support only 16-bit mono PCM WAV files.
  */
-object WavHeaderParser {
+class WavHeaderParser {
 
-    private const val EXPECTED_CHANNELS = 1 // Mono
-    private const val EXPECTED_BIT_DEPTH = 16 // 16-bit
+    companion object {
+        private const val EXPECTED_CHANNELS = 1 // Mono
+        private const val EXPECTED_BIT_DEPTH = 16 // 16-bit
+    }
 
     /**
      * Reads the header of a WAV file to find the audio data.
@@ -26,7 +28,7 @@ object WavHeaderParser {
     ): WavFormatInfo? {
         try {
 
-            // early exit: first 12 bytes are not RIFF . . . . WAVE !
+            // early exit: the first 12 bytes are not RIFF . . . WAVE!
             validateRiffWaveHeader(inputStream, uriString)
 
             var fmtInfo: Triple<Int, Int, Int>? = null

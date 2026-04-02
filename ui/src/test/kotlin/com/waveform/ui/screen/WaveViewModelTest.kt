@@ -15,7 +15,6 @@ import com.waveform.domain.player.usecase.SeekAudioUseCase
 import com.waveform.domain.player.usecase.StopAudioUseCase
 import com.waveform.domain.usecase.GetAudioTrackDetailsUseCase
 import com.waveform.domain.usecase.GetWaveformUseCase
-import com.waveform.domain.usecase.MillisToDigitalClockUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,7 +46,6 @@ class WaveViewModelTest {
 
     private lateinit var viewModel: WaveViewModel
 
-    // Mocks
     private val getWaveformUseCase: GetWaveformUseCase = mock()
     private val getAudioTrackDetailsUseCase: GetAudioTrackDetailsUseCase = mock()
     private val loadAudioUseCase: LoadAudioUseCase = mock()
@@ -57,16 +55,13 @@ class WaveViewModelTest {
     private val stopAudioUseCase: StopAudioUseCase = mock()
     private val observePlaybackStateUseCase: ObservePlaybackStateUseCase = mock()
     private val releasePlayerUseCase: ReleasePlayerUseCase = mock()
-    private val millisToDigitalClockUseCase: MillisToDigitalClockUseCase = mock()
 
     private val playbackStateFlow = MutableStateFlow(PlaybackState.default)
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-
         whenever(observePlaybackStateUseCase()).thenReturn(playbackStateFlow.asStateFlow())
-        whenever(millisToDigitalClockUseCase(any())).thenAnswer { "00:00" } // simple mock
 
         viewModel = WaveViewModel(
             getWaveformUseCase,
@@ -78,7 +73,6 @@ class WaveViewModelTest {
             stopAudioUseCase,
             observePlaybackStateUseCase,
             releasePlayerUseCase,
-            millisToDigitalClockUseCase
         )
     }
 
@@ -89,13 +83,11 @@ class WaveViewModelTest {
 
     @Test
     fun `PickFileClicked  Reset state and clearing`() = runTest {
-        val intent = WaveScreenIntent.PickFileClicked
-        viewModel.processIntent(intent)
+        viewModel.processIntent(WaveScreenIntent.PickFileClicked)
 
         val state = viewModel.viewStateFlow.value
         assertNull(state.errorMessage)
         assertNull(state.waveformData)
-        // Default amplitudes
         assertEquals(-1f, state.displayMinAmplitude, 0.01f)
         assertEquals(1f, state.displayMaxAmplitude, 0.01f)
     }
@@ -105,30 +97,14 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("content://test")
 
-        // Setup mocks to suspend so we can check intermediate state
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "test.wav",
-                    1000L,
-                    44100
-                )
-            )
+            Result.Success(AudioTrackDetails("test.wav", 1000L, 44100))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    emptyList(),
-                    1000
-                )
-            )
+            Result.Success(WaveformResultData(emptyList(), 1000))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
-
-        // Immediately check state (before full suspension finishes if synchronous parts run first)
-        // Actually runTest executes until suspension. To check "immediate" state inside viewmodel update before launch:
-        // The VM implementation updates state before launching coroutine.
 
         val state = viewModel.viewStateFlow.value
         assertEquals(uri, state.fileUri)
@@ -151,12 +127,7 @@ class WaveViewModelTest {
         whenever(loadAudioUseCase(uriString)).thenReturn(Unit)
         whenever(getAudioTrackDetailsUseCase(uriString)).thenReturn(Result.Success(details))
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    emptyList(),
-                    5000
-                )
-            )
+            Result.Success(WaveformResultData(emptyList(), 5000))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
@@ -174,17 +145,13 @@ class WaveViewModelTest {
         whenever(loadAudioUseCase(uriString)).thenReturn(Unit)
         whenever(getAudioTrackDetailsUseCase(uriString)).thenReturn(Result.Error("Failed to read details"))
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    emptyList(),
-                    1000
-                )
-            )
+            Result.Success(WaveformResultData(emptyList(), 1000))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
+        // Details error is non-fatal; waveform still succeeds so the error is preserved
         assertEquals("Failed to read details", viewModel.viewStateFlow.value.errorMessage)
     }
 
@@ -197,29 +164,18 @@ class WaveViewModelTest {
         val segments = listOf(WaveformSegment(0.0f, 1.0f))
         val waveformResult = WaveformResultData(segments, 2000)
 
-        // First load to populate cache
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "test",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("test", 0, 0))
         )
         whenever(getWaveformUseCase(uriString, DEFAULT_SEGMENTS_NUMBER)).thenReturn(
-            Result.Success(
-                waveformResult
-            )
+            Result.Success(waveformResult)
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        // Reset mocks to verify no second call
         org.mockito.kotlin.reset(getWaveformUseCase)
 
-        // Select same file again (cache hit)
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
@@ -239,18 +195,10 @@ class WaveViewModelTest {
         val result = WaveformResultData(segments, 3000)
 
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "test",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("test", 0, 0))
         )
         whenever(getWaveformUseCase(uriString, DEFAULT_SEGMENTS_NUMBER)).thenReturn(
-            Result.Success(
-                result
-            )
+            Result.Success(result)
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
@@ -270,13 +218,7 @@ class WaveViewModelTest {
         whenever(uri.toString()).thenReturn(uriString)
 
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "test",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("test", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(Result.Error("Processing failed"))
 
@@ -307,16 +249,15 @@ class WaveViewModelTest {
 
     @Test
     fun `NumSegmentsChanged  Range coercion validation`() = runTest {
-        viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(10)) // Below MIN (50)
+        viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(10))
         assertEquals(MIN_NUM_SEGMENTS, viewModel.viewStateFlow.value.currentNumSegments)
 
-        viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(5000)) // Above MAX (1000)
+        viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(5000))
         assertEquals(MAX_NUM_SEGMENTS, viewModel.viewStateFlow.value.currentNumSegments)
     }
 
     @Test
     fun `NumSegmentsChanged  No file loaded`() = runTest {
-        // Initial state has no file
         viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(200))
 
         assertEquals(200, viewModel.viewStateFlow.value.currentNumSegments)
@@ -329,33 +270,19 @@ class WaveViewModelTest {
         val uriString = "content://test"
         whenever(uri.toString()).thenReturn(uriString)
 
-        // Pre-load cache for 100 segments
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(uriString, 100)).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 100))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
-        // Change to 100 segments
         viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(100))
         advanceUntilIdle()
 
         org.mockito.kotlin.reset(getWaveformUseCase)
 
-        // Now trigger change again to 100, should hit cache
         viewModel.processIntent(WaveScreenIntent.NumSegmentsChanged(100))
         advanceUntilIdle()
 
@@ -369,21 +296,10 @@ class WaveViewModelTest {
         whenever(uri.toString()).thenReturn(uriString)
 
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 100))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
@@ -404,21 +320,10 @@ class WaveViewModelTest {
         whenever(uri.toString()).thenReturn(uriString)
 
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 100))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
@@ -434,40 +339,23 @@ class WaveViewModelTest {
 
     @Test
     fun `ToggleDynamicNormalization  Amplitude recalculation`() = runTest {
-        // Setup state with some waveform data
         val segments = listOf(WaveformSegment(-0.2f, 0.2f), WaveformSegment(-0.8f, 0.8f))
-
-        // We need to inject this data via file selection logic or hack state? 
-        // The ViewModel doesn't expose mutable state directly. We use FileSelected to populate it.
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("content://test")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    segments,
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(segments, 100))
         )
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        // Initial state (false): min -1, max 1
         assertFalse(viewModel.viewStateFlow.value.dynamicNormalizationEnabled)
         assertEquals(-1f, viewModel.viewStateFlow.value.displayMinAmplitude, 0.01f)
         assertEquals(1f, viewModel.viewStateFlow.value.displayMaxAmplitude, 0.01f)
 
-        // Toggle ON
         viewModel.processIntent(WaveScreenIntent.ToggleDynamicNormalization)
 
         assertTrue(viewModel.viewStateFlow.value.dynamicNormalizationEnabled)
@@ -477,9 +365,7 @@ class WaveViewModelTest {
 
     @Test
     fun `PlayPauseClicked  Pause when playing`() = runTest {
-        // Simulate playing state
         playbackStateFlow.value = PlaybackState(isPlaying = true)
-        // Ensure VM updates internal state based on flow
         advanceUntilIdle()
 
         viewModel.processIntent(WaveScreenIntent.PlayPauseClicked)
@@ -490,28 +376,15 @@ class WaveViewModelTest {
     fun `PlayPauseClicked  Play when paused`() = runTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
-        // Load file first so fileUri is set and isPlayerLoading is false
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 100))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        // Ensure not loading
         playbackStateFlow.value = PlaybackState(isPlaying = false, isLoading = false)
         advanceUntilIdle()
 
@@ -524,26 +397,14 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    1000
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 1000))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        // Simulate playback at end
         playbackStateFlow.value = PlaybackState(
             isPlaying = false,
             isLoading = false,
@@ -565,26 +426,14 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    100
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 100))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        // Simulate loading
         playbackStateFlow.value = PlaybackState(isLoading = true)
         advanceUntilIdle()
 
@@ -608,22 +457,11 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    2000
-                )
-            )
-        ) // Duration 2000
+            Result.Success(WaveformResultData(listOf(), 2000))
+        )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
@@ -632,7 +470,7 @@ class WaveViewModelTest {
 
         viewModel.processIntent(WaveScreenIntent.SeekTo(0.5f))
 
-        verify(seekAudioUseCase).invoke(1000L) // 0.5 * 2000
+        verify(seekAudioUseCase).invoke(1000L)
     }
 
     @Test
@@ -640,21 +478,10 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    2000
-                )
-            )
+            Result.Success(WaveformResultData(listOf(), 2000))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
@@ -671,26 +498,13 @@ class WaveViewModelTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(getAudioTrackDetailsUseCase(any())).thenReturn(
-            Result.Success(
-                AudioTrackDetails(
-                    "t",
-                    0,
-                    0
-                )
-            )
+            Result.Success(AudioTrackDetails("t", 0, 0))
         )
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    listOf(),
-                    0
-                )
-            )
-        ) // Duration 0
+            Result.Success(WaveformResultData(listOf(), 0))
+        )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
-
-        // playbackStateFlow total duration 0
 
         viewModel.processIntent(WaveScreenIntent.SeekTo(0.5f))
         verify(seekAudioUseCase, never()).invoke(any())
@@ -698,18 +512,12 @@ class WaveViewModelTest {
 
     @Test
     fun `ClearErrorMessage  Reset`() = runTest {
-        // Set error manually via some failed action
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(loadAudioUseCase("c")).thenReturn(Unit)
         whenever(getAudioTrackDetailsUseCase("c")).thenReturn(Result.Error("Some error"))
         whenever(getWaveformUseCase(any(), any())).thenReturn(
-            Result.Success(
-                WaveformResultData(
-                    emptyList(),
-                    0
-                )
-            )
+            Result.Success(WaveformResultData(emptyList(), 0))
         )
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
@@ -721,27 +529,21 @@ class WaveViewModelTest {
     }
 
     @Test
-    fun `Combined  Error Message Concatenation`() = runTest {
+    fun `Combined  Last error wins when multiple errors occur`() = runTest {
         val uri = mock<Uri>()
         whenever(uri.toString()).thenReturn("c")
         whenever(loadAudioUseCase("c")).thenReturn(Unit)
-
-        // First error
         whenever(getAudioTrackDetailsUseCase("c")).thenReturn(Result.Error("Error 1"))
-        // Second error
         whenever(getWaveformUseCase(any(), any())).thenReturn(Result.Error("Error 2"))
 
         viewModel.processIntent(WaveScreenIntent.FileSelected(uri))
         advanceUntilIdle()
 
-        val msg = viewModel.viewStateFlow.value.errorMessage
-        assertTrue(msg!!.contains("Error 1"))
-        assertTrue(msg.contains("Error 2"))
+        assertEquals("Error 2", viewModel.viewStateFlow.value.errorMessage)
     }
 
     @Test
     fun `Combined  Amplitude Calculation Logic`() = runTest {
-        // Ensure default amplitudes even with dynamic norm if no data
         viewModel.processIntent(WaveScreenIntent.ToggleDynamicNormalization)
         assertTrue(viewModel.viewStateFlow.value.dynamicNormalizationEnabled)
         assertEquals(-1f, viewModel.viewStateFlow.value.displayMinAmplitude, 0.01f)

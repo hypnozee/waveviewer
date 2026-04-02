@@ -11,6 +11,8 @@ import java.nio.ByteOrder
 
 class WavHeaderParserTest {
 
+    private val parser = WavHeaderParser()
+
     private fun createValidWavHeader(
         channels: Short = 1,
         sampleRate: Int = 44100,
@@ -54,7 +56,7 @@ class WavHeaderParserTest {
         )
         val inputStream = ByteArrayInputStream(headerBytes)
 
-        val result = WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, "test.wav")
+        val result = parser.parseWavHeaderAndLocateDataChunk(inputStream, "test.wav")
 
         assertNotNull(result)
         assertEquals(1, result!!.channels)
@@ -69,7 +71,7 @@ class WavHeaderParserTest {
         val inputStream = ByteArrayInputStream(headerBytes)
 
         val exception = assertThrows(IOException::class.java) {
-            WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, "stereo.wav")
+            parser.parseWavHeaderAndLocateDataChunk(inputStream, "stereo.wav")
         }
         assertEquals(
             "Unsupported WAV format in stereo.wav: Expected 1 channel(s) and 16-bit. Got 2 channel(s) and 16-bit.",
@@ -83,7 +85,7 @@ class WavHeaderParserTest {
         val inputStream = ByteArrayInputStream(headerBytes)
 
         val exception = assertThrows(IOException::class.java) {
-            WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, "8bit.wav")
+            parser.parseWavHeaderAndLocateDataChunk(inputStream, "8bit.wav")
         }
         assertEquals(
             "Unsupported WAV format in 8bit.wav: Expected 1 channel(s) and 16-bit. Got 1 channel(s) and 8-bit.",
@@ -99,7 +101,7 @@ class WavHeaderParserTest {
         val inputStream = ByteArrayInputStream(headerBytes)
 
         val exception = assertThrows(IOException::class.java) {
-            WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, "non_pcm.wav")
+            parser.parseWavHeaderAndLocateDataChunk(inputStream, "non_pcm.wav")
         }
         assertEquals(
             "Unsupported audio format in 'fmt ' chunk (expected PCM=1, got 2) in non_pcm.wav.",
@@ -116,7 +118,7 @@ class WavHeaderParserTest {
 
         val inputStream2 = ByteArrayInputStream(riffWaveHeader.array())
         val exception2 = assertThrows(IOException::class.java) {
-            WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream2, "no_wave_signature.wav")
+            parser.parseWavHeaderAndLocateDataChunk(inputStream2, "no_wave_signature.wav")
         }
         assertEquals("Invalid RIFF/WAVE signature in no_wave_signature.wav.", exception2.message)
     }

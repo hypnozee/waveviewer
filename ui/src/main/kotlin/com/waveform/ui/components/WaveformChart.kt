@@ -6,6 +6,10 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -38,11 +42,16 @@ fun WaveformChart(
     yMin: Float,
     yMax: Float,
     modifier: Modifier = Modifier,
+    onDragStarted: () -> Unit = {},
     onSeekIntent: (Float) -> Unit,
     lineColor: Color = MaterialTheme.colorScheme.primary,
     pointColor: Color = MaterialTheme.colorScheme.secondary,
     progressLineColor: Color = MaterialTheme.colorScheme.tertiary,
 ) {
+    // Local position shown while dragging; null when not dragging
+    var dragProgress by remember { mutableStateOf<Float?>(null) }
+    val displayProgress = dragProgress ?: playProgress
+
     val lineWidth = with(LocalDensity.current) { 1.dp.toPx() }
     val pointSize = with(LocalDensity.current) { 2.dp.toPx() }
     val progressLineWidth = with(LocalDensity.current) { 3.dp.toPx() }
@@ -58,19 +67,23 @@ fun WaveformChart(
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
+                        onDragStarted()
                         if (size.width > 0) {
-                            val positionFraction =
-                                (offset.x / size.width).coerceIn(0f, 1f)
-                            onSeekIntent(positionFraction)
+                            dragProgress = (offset.x / size.width).coerceIn(0f, 1f)
                         }
                     },
                     onHorizontalDrag = { change, _ ->
                         if (size.width > 0) {
-                            val positionFraction =
-                                (change.position.x / size.width).coerceIn(0f, 1f)
-                            onSeekIntent(positionFraction)
+                            dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
                             change.consume()
                         }
+                    },
+                    onDragEnd = {
+                        dragProgress?.let { onSeekIntent(it) }
+                        dragProgress = null
+                    },
+                    onDragCancel = {
+                        dragProgress = null
                     }
                 )
             }
@@ -95,7 +108,7 @@ fun WaveformChart(
             canvasWidth = canvasWidth,
             canvasHeight = canvasHeight,
             progressLineColor = progressLineColor,
-            currentPositionFraction = playProgress,
+            currentPositionFraction = displayProgress,
             progressLineWidthPx = progressLineWidth
         )
     }

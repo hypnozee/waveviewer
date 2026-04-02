@@ -21,7 +21,11 @@ private const val SUPPORTED_CHANNELS = 1
  * 4. Processes the audio with [WavStreamProcessor] to get waveform parts and length.
  * 5. Gives back the [WaveformResultData] if successful, or an error.
  */
-class GetWaveformUseCase(private val audioRepository: AudioRepository) {
+class GetWaveformUseCase(
+    private val audioRepository: AudioRepository,
+    private val wavHeaderParser: WavHeaderParser,
+    private val wavStreamProcessor: WavStreamProcessor,
+) {
 
     suspend operator fun invoke(
         uriString: String,
@@ -29,16 +33,14 @@ class GetWaveformUseCase(private val audioRepository: AudioRepository) {
     ): Result<WaveformResultData> {
         return withContext(Dispatchers.IO) {
             try {
-                if (numSegments <= 0) { // Added validation for early exit
+                if (numSegments <= 0) {
                     return@withContext Result.Error("Segments number must be greater than 0. Received: $numSegments")
                 }
                 audioRepository.getAudioFileInputStream(uriString)?.use { inputStream ->
-                    // Parse WAV header
                     val formatInfo =
-                        WavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, uriString)
+                        wavHeaderParser.parseWavHeaderAndLocateDataChunk(inputStream, uriString)
                             ?: return@withContext Result.Error("Invalid WAV file: Could not parse header or locate data chunk.")
 
-                    // Validate WAV format
                     if (formatInfo.bitDepth != SUPPORTED_BIT_DEPTH) {
                         return@withContext Result.Error("Unsupported WAV: Only $SUPPORTED_BIT_DEPTH-bit files are supported.")
                     }
@@ -51,7 +53,7 @@ class GetWaveformUseCase(private val audioRepository: AudioRepository) {
                     if (formatInfo.dataChunkDeclaredSize <= 0) {
                         return@withContext Result.Error("Invalid WAV file: Data chunk has no size or is invalid.")
                     }
-                    WavStreamProcessor.processStream(inputStream, formatInfo, numSegments)
+                    wavStreamProcessor.processStream(inputStream, formatInfo, numSegments)
                 }
                     ?: return@withContext Result.Error("Could not open input stream for URI via repository: $uriString")
             } catch (e: IOException) {

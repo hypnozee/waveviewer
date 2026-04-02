@@ -1,7 +1,6 @@
 package com.waveform.domain.processor
 
 import com.waveform.domain.core.Result
-import com.waveform.domain.model.SegmentState
 import com.waveform.domain.model.WavFormatInfo
 import com.waveform.domain.model.WaveformResultData
 import com.waveform.domain.model.WaveformSegment
@@ -12,12 +11,41 @@ import java.nio.ByteOrder
 import kotlin.math.max
 import kotlin.math.min
 
-object WavStreamProcessor {
-    private const val EXPECTED_CHANNELS = 1
-    private const val EXPECTED_BIT_DEPTH = 16
-    private const val STREAM_READ_BUFFER_SIZE = 4096
-    private const val MAX_16_BIT = 32768.0f
-    private const val BYTES_PER_FRAME_MONO_16_BIT = 2 /**  EXPECTED_BIT_DEPTH/8 * EXPECTED_CHANNELS  **/
+class WavStreamProcessor {
+    companion object {
+        private const val EXPECTED_CHANNELS = 1
+        private const val EXPECTED_BIT_DEPTH = 16
+        private const val STREAM_READ_BUFFER_SIZE = 4096
+        private const val MAX_16_BIT = 32768.0f
+        private const val BYTES_PER_FRAME_MONO_16_BIT = 2 /**  EXPECTED_BIT_DEPTH/8 * EXPECTED_CHANNELS  **/
+    }
+
+    // Processing-internal state; not part of the public domain model surface (#11)
+    private data class SegmentState(
+        val minValues: FloatArray,
+        val maxValues: FloatArray,
+        val populated: BooleanArray,
+        val samplesPerSegment: Double,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as SegmentState
+            if (samplesPerSegment != other.samplesPerSegment) return false
+            if (!minValues.contentEquals(other.minValues)) return false
+            if (!maxValues.contentEquals(other.maxValues)) return false
+            if (!populated.contentEquals(other.populated)) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = samplesPerSegment.hashCode()
+            result = 31 * result + minValues.contentHashCode()
+            result = 31 * result + maxValues.contentHashCode()
+            result = 31 * result + populated.contentHashCode()
+            return result
+        }
+    }
 
     fun processStream(
         inputStream: InputStream,
@@ -25,7 +53,6 @@ object WavStreamProcessor {
         numSegments: Int,
     ): Result<WaveformResultData> {
         try {
-            // Initial Validations
             validateFormat(formatInfo)?.let { return it }
 
             if (numSegments <= 0) {
@@ -47,7 +74,6 @@ object WavStreamProcessor {
             var totalBytesSuccessfullyReadFromStream = 0L
             var sampleIndex = 0L
 
-            // Main processing loop
             while (totalBytesSuccessfullyReadFromStream < formatInfo.dataChunkDeclaredSize) {
                 val bytesToReadForThisPass = min(
                     readBuffer.size.toLong(),
@@ -57,7 +83,7 @@ object WavStreamProcessor {
 
                 val actualBytesReadThisPass =
                     inputStream.read(readBuffer, 0, bytesToReadForThisPass)
-                if (actualBytesReadThisPass == -1) { // EOF
+                if (actualBytesReadThisPass == -1) {
                     if (totalBytesSuccessfullyReadFromStream == 0L) {
                         return Result.Error("Reached EOF at the start of the data chunk when data was expected.")
                     }
@@ -80,8 +106,7 @@ object WavStreamProcessor {
             val segments = createFinalSegments(segmentState, numSegments)
             logSegmentPopulationWarnings(segments, segmentState, sampleIndex, numSegments)
 
-            val durationMillis =
-                calculateDurationMillis(sampleIndex, formatInfo.sampleRate)
+            val durationMillis = calculateDurationMillis(sampleIndex, formatInfo.sampleRate)
             return Result.Success(WaveformResultData(segments, durationMillis))
 
         } catch (e: IOException) {
@@ -108,11 +133,11 @@ object WavStreamProcessor {
         val samplesPerSegmentValue = if (numSegments > 0) {
             totalExpectedSamples.toDouble() / numSegments
         } else {
-            0.0 // Should be caught by validation earlier, but defensive
+            0.0
         }
         return SegmentState(
             minValues = FloatArray(numSegments) { MAX_16_BIT },
-            maxValues = FloatArray(numSegments) { - MAX_16_BIT },
+            maxValues = FloatArray(numSegments) { -MAX_16_BIT },
             populated = BooleanArray(numSegments) { false },
             samplesPerSegment = samplesPerSegmentValue
         )
@@ -139,7 +164,6 @@ object WavStreamProcessor {
             val rawSample = sampleByteBuffer.short.toInt()
             val normalizedSample = rawSample / MAX_16_BIT
 
-            // Check numSegments > 0 before division or array access
             if (numSegments > 0) {
                 val segmentsIndex = if (segmentState.samplesPerSegment > 0) {
                     (currentOverallSampleIndex / segmentState.samplesPerSegment).toInt()
@@ -177,7 +201,7 @@ object WavStreamProcessor {
         }
         if (segments.isNotEmpty() && sampleIndex > 0) {
             val meaningfulSegments = segmentState.populated.count { it }
-            if (meaningfulSegments == 0) { // Check numSegments > 0 here
+            if (meaningfulSegments == 0) {
                 println("Warning: No segments meaningfully populated despite processing $sampleIndex samples out of $numSegments Segments number.")
             }
         }

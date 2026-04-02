@@ -1,8 +1,12 @@
 package com.waveform.data.player
 
 import android.app.Application
-import android.media.MediaPlayer
 import androidx.core.net.toUri
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import com.waveform.domain.player.model.PlaybackState
 import com.waveform.domain.player.repository.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -18,174 +22,102 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Plays audio using Android's MediaPlayer.
- * It can load, play, pause, seek, and stop audio.
- * It also keeps track of the playback status.
- **/
 class AudioPlayerImpl(
     private val application: Application,
+    private val playerFactory: (Application) -> ExoPlayer = { app ->
+        ExoPlayer.Builder(app).build()
+    },
 ) : AudioPlayer {
 
-    private var mediaPlayer: MediaPlayer? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var positionTrackerJob: Job? = null
+    private var player: ExoPlayer? = null
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var trackerJob: Job? = null
     private val _playbackState = MutableStateFlow(PlaybackState.default)
 
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
-    override suspend fun load(uriString: String) = withContext(Dispatchers.IO) {
+    override suspend fun load(uriString: String) = withContext(Dispatchers.Main) {
         releaseCurrentPlayer()
-        _playbackState.update {
-            PlaybackState.default.copy(currentUriString = uriString, isLoading = true)
-        }
-        val uri = uriString.toUri() // Convert String to Uri
-        mediaPlayer = MediaPlayer().apply {
-            try {
-                setDataSource(application, uri)
-                prepareAsync()
+        _playbackState.update { PlaybackState.default.copy(currentUriString = uriString, isLoading = true) }
 
-                setOnPreparedListener { mp ->
-                    coroutineScope.launch(Dispatchers.Main) {
+        val exoPlayer = playerFactory(application)
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET } ?: 0L
                         _playbackState.update {
-                            it.copy(
-                                totalDurationMillis = mp.duration.toLong(),
-                                isLoading = false,
-                                error = null
-                            )
+                            it.copy(totalDurationMillis = duration, isLoading = false, error = null)
                         }
                     }
-                }
-                setOnCompletionListener {
-                    coroutineScope.launch(Dispatchers.Main) {
+                    Player.STATE_ENDED -> {
                         _playbackState.update {
-                            it.copy(
-                                isPlaying = false,
-                                currentPositionMillis = it.totalDurationMillis
-                            )
+                            it.copy(isPlaying = false, currentPositionMillis = it.totalDurationMillis)
                         }
                         stopPositionTracker()
                     }
-                }
-                setOnErrorListener { _, what, extra ->
-                    coroutineScope.launch(Dispatchers.Main) {
-                        _playbackState.update {
-                            it.copy(
-                                error = "MediaPlayer Error - What: $what, Extra: $extra",
-                                isLoading = false,
-                                isPlaying = false
-                            )
-                        }
-                        releaseCurrentPlayer()
+
+                    Player.STATE_BUFFERING -> {
+                        _playbackState.update { it.copy(isLoading = true) }
                     }
-                    true
-                }
-            } catch (e: Exception) {
-                coroutineScope.launch(Dispatchers.Main) {
-                    _playbackState.update {
-                        it.copy(
-                            error = "Failed to initialize media player: ${e.message}",
-                            isLoading = false,
-                            isPlaying = false
-                        )
+
+                    Player.STATE_IDLE -> {
+                        // Player is stopped or not yet prepared; no state update needed here
+                        // as stop()/release() manage state transitions explicitly.
                     }
-                    releaseCurrentPlayer()
                 }
             }
-        }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                _playbackState.update { it.copy(isPlaying = isPlaying) }
+                if (isPlaying) startPositionTracker() else stopPositionTracker()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                _playbackState.update {
+                    it.copy(error = "Player error: ${error.message}", isLoading = false, isPlaying = false)
+                }
+                releaseCurrentPlayer()
+            }
+        })
+
+        exoPlayer.setMediaItem(MediaItem.fromUri(uriString.toUri()))
+        exoPlayer.prepare()
+        player = exoPlayer
     }
 
     override fun play() {
-        mediaPlayer?.let {
-            if (!it.isPlaying && playbackState.value.totalDurationMillis > 0 && !playbackState.value.isLoading) {
-                try {
-                    it.start()
-                    _playbackState.update { state -> state.copy(isPlaying = true, error = null) }
-                    startPositionTracker()
-                } catch (e: IllegalStateException) {
-                    _playbackState.update { state ->
-                        state.copy(
-                            error = "MediaPlayer error on play: ${e.message}",
-                            isPlaying = false
-                        )
-                    }
+        player?.let {
+            if (_playbackState.value.totalDurationMillis > 0) {
+                if (it.playbackState == Player.STATE_ENDED) {
+                    it.seekTo(0)
                 }
+                it.play()
             }
-        } ?: run {
-            _playbackState.update { it.copy(error = "Player not initialized. Call load() first.") }
-        }
+        } ?: _playbackState.update { it.copy(error = "Player not initialized. Call load() first.") }
     }
 
     override fun pause() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                try {
-                    it.pause()
-                    _playbackState.update { state -> state.copy(isPlaying = false) }
-                    stopPositionTracker()
-                } catch (e: IllegalStateException) {
-                    _playbackState.update { state ->
-                        state.copy(error = "MediaPlayer error on pause: ${e.message}")
-                    }
-                }
-            }
-        }
+        player?.pause()
     }
 
     override fun seekTo(positionMillis: Long) {
-        mediaPlayer?.let {
-            if (playbackState.value.totalDurationMillis > 0) {
-                try {
-                    val newPosition = positionMillis.coerceIn(0, it.duration.toLong())
-                    it.seekTo(newPosition.toInt())
-                    _playbackState.update { state -> state.copy(currentPositionMillis = newPosition) }
-                } catch (e: IllegalStateException) {
-                    _playbackState.update { state ->
-                        state.copy(error = "MediaPlayer error on seek: ${e.message}")
-                    }
-                }
+        player?.let {
+            if (_playbackState.value.totalDurationMillis > 0) {
+                val clamped = positionMillis.coerceIn(0L, _playbackState.value.totalDurationMillis)
+                it.seekTo(clamped)
+                _playbackState.update { state -> state.copy(currentPositionMillis = clamped) }
             }
         }
     }
 
     override fun stop() {
-        mediaPlayer?.let { mp ->
-            try {
-                if (mp.isPlaying) {
-                    mp.stop()
-                }
-                mp.reset()
-                _playbackState.update {
-                    PlaybackState.default.copy(currentUriString = it.currentUriString)
-                }
-            } catch (e: IllegalStateException) {
-                _playbackState.update { state ->
-                    state.copy(error = "MediaPlayer error on stop: ${e.message}")
-                }
-            }
+        player?.run {
+            stop()
+            clearMediaItems()
         }
         stopPositionTracker()
-    }
-
-    private fun releaseCurrentPlayer() {
-        mediaPlayer?.apply {
-            setOnPreparedListener(null)
-            setOnCompletionListener(null)
-            setOnErrorListener(null)
-            try {
-                if (isPlaying) {
-                    this.stop()
-                }
-                reset()
-                release()
-            } catch (e: Exception) {
-                _playbackState.update {
-                    it.copy(error = "Error releasing existing media player: ${e.message}")
-                }
-            }
-        }
-        mediaPlayer = null
-        stopPositionTracker()
+        _playbackState.update { PlaybackState.default.copy(currentUriString = it.currentUriString) }
     }
 
     override fun release() {
@@ -193,27 +125,25 @@ class AudioPlayerImpl(
         _playbackState.value = PlaybackState.default
     }
 
+    private fun releaseCurrentPlayer() {
+        player?.release()
+        player = null
+        stopPositionTracker()
+    }
 
     private fun startPositionTracker() {
         stopPositionTracker()
-        positionTrackerJob = coroutineScope.launch {
-            while (isActive && mediaPlayer?.isPlaying == true) {
-                try {
-                    val currentPosition = mediaPlayer?.currentPosition?.toLong()
-                        ?: playbackState.value.currentPositionMillis
-                    _playbackState.update { it.copy(currentPositionMillis = currentPosition) }
-                } catch (e: IllegalStateException) {
-                    _playbackState.update { it.copy(error = "Error updating position: ${e.message}") }
-                    stopPositionTracker()
-                    break
-                }
+        trackerJob = scope.launch {
+            while (isActive && player?.isPlaying == true) {
+                val pos = player?.currentPosition ?: _playbackState.value.currentPositionMillis
+                _playbackState.update { it.copy(currentPositionMillis = pos) }
                 delay(50)
             }
         }
     }
 
     private fun stopPositionTracker() {
-        positionTrackerJob?.cancel()
-        positionTrackerJob = null
+        trackerJob?.cancel()
+        trackerJob = null
     }
 }

@@ -126,7 +126,7 @@ fun WaveScreenContent(
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
-                    if (viewState.waveformData != null && viewState.waveformData.isNotEmpty()) {
+                    if (!viewState.waveformData.isNullOrEmpty()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -152,9 +152,10 @@ fun WaveScreenContent(
                                 yMin = viewState.displayMinAmplitude,
                                 yMax = viewState.displayMaxAmplitude,
                                 modifier = Modifier
-                                    .weight(1f) // Chart takes available vertical space
+                                    .weight(1f)
                                     .fillMaxWidth()
                                     .padding(horizontal = 14.dp),
+                                onDragStarted = { onIntent(WaveScreenIntent.SeekDragStarted) },
                                 onSeekIntent = { fraction ->
                                     onIntent(WaveScreenIntent.SeekTo(fraction))
                                 },
@@ -215,9 +216,9 @@ fun WaveScreenContent(
             viewState.fileUri?.let {
                 PlaybackControls(
                     isPlaying = viewState.isPlaying,
-                    isBuffering = viewState.isLoadingFile || viewState.isLoadingWaveform || viewState.isPlayerLoading,
-                    currentAudioPosition = viewState.currentAudioPosition,
-                    totalAudioDuration = viewState.totalAudioDuration,
+                    isBuffering = viewState.isLoadingFile || viewState.isLoadingWaveform || viewState.isPlayerLoading || viewState.isSeeking,
+                    currentPositionMillis = viewState.currentPositionMillis,
+                    totalDurationMillis = viewState.totalDurationMillis,
                     onPlayPauseClicked = { onIntent(WaveScreenIntent.PlayPauseClicked) },
                 )
             }

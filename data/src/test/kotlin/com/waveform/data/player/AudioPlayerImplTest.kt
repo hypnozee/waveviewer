@@ -1,10 +1,13 @@
 package com.waveform.data.player
 
 import android.app.Application
+import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import com.waveform.domain.player.model.PlaybackState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -13,29 +16,30 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowMediaPlayer
-import org.robolectric.shadows.util.DataSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 @ExperimentalCoroutinesApi
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], shadows = [ShadowMediaPlayer::class])
 class AudioPlayerImplTest {
 
-    private lateinit var audioPlayer: AudioPlayerImpl
-    private lateinit var application: Application
     private val testDispatcher = StandardTestDispatcher()
+    private val mockPlayer: ExoPlayer = mock()
+    private val mockApplication: Application = mock()
+    private lateinit var audioPlayer: AudioPlayerImpl
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        application = androidx.test.core.app.ApplicationProvider.getApplicationContext()
-        audioPlayer = AudioPlayerImpl(application)
+        audioPlayer = AudioPlayerImpl(mockApplication, playerFactory = { mockPlayer })
     }
 
     @After
@@ -44,221 +48,190 @@ class AudioPlayerImplTest {
         audioPlayer.release()
     }
 
-    @Test
-    fun `Initial playback state verification`() = runTest {
-        val state = audioPlayer.playbackState.value
-        assertEquals(PlaybackState.default, state)
+    private fun loadAndCaptureListener(): Player.Listener {
+        val captor = argumentCaptor<Player.Listener>()
+        verify(mockPlayer).addListener(captor.capture())
+        return captor.firstValue
     }
 
     @Test
-    fun `Load valid URI success flow`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
+    fun `Initial playback state`() = runTest {
+        assertEquals(PlaybackState.default, audioPlayer.playbackState.value)
+    }
 
-        audioPlayer.load(uri)
+    @Test
+    fun `Load sets loading state and prepares player`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
+
+        assertTrue(audioPlayer.playbackState.value.isLoading)
+        assertEquals("content://test/audio", audioPlayer.playbackState.value.currentUriString)
+        verify(mockPlayer).prepare()
+    }
+
+    @Test
+    fun `Load transitions to ready on STATE_READY`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
+
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(3000L)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
 
         val state = audioPlayer.playbackState.value
         assertFalse(state.isLoading)
-        assertEquals(1000L, state.totalDurationMillis)
-        assertEquals(null, state.error)
+        assertEquals(3000L, state.totalDurationMillis)
+        assertNull(state.error)
     }
 
     @Test
-    fun `Load invalid URI format exception`() = runTest {
-        // Robolectric's ShadowMediaPlayer doesn't strictly validate URI format in setDataSource in the same way as real device,
-        // but we can simulate an exception by providing a bad data source or mocking.
-        // Here we test the catch block inside AudioPlayerImpl.load which catches Exception
+    fun `Load handles unknown duration gracefully`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
 
-        // To trigger the exception in setDataSource inside runTest, we can rely on Robolectric behavior 
-        // or we would need to restructure AudioPlayer to accept a MediaPlayer factory. 
-        // Given the current structure, we can try to pass a null-like or very broken URI that might trigger internal checks if any, 
-        // but ShadowMediaPlayer is quite lenient.
-        // Alternatively, since we cannot easily mock the internal MediaPlayer construction without DI, 
-        // we rely on ShadowMediaPlayer throwing if the resource is bad? No, it usually doesn't throw on setDataSource for strings unless configured.
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(C.TIME_UNSET)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
 
-        // Let's try a strategy where we force an error via a "bad" URI if possible, or acknowledge that this test 
-        // is hard to write purely with Robolectric without dependency injection for MediaPlayer.
-        // However, we can verify the state if we pass a URI that causes setDataSource to fail.
-
-        // For the sake of this test in this environment, we'll assume we can't easily trigger the exception 
-        // on `setDataSource` with just a string in standard Robolectric without a custom Shadow or Factory.
-        // SKIP for now or implementing a different way if DI was available.
-
-        // Attempting a known failing path:
-        try {
-            audioPlayer.load("invalid-uri-scheme://something")
-            advanceUntilIdle()
-        } catch (_: Exception) {
-            // If it throws, it's not caught inside load? load catches internally.
-        }
-        // If ShadowMediaPlayer accepts everything, we might not see the error state.
-        // Let's proceed to the next test which uses OnErrorListener which is easier to simulate.
+        assertEquals(0L, audioPlayer.playbackState.value.totalDurationMillis)
     }
 
     @Test
-    fun `Play success path`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
-
-        audioPlayer.load(uri)
+    fun `Load reports player error via listener`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
 
-        audioPlayer.play()
-        advanceUntilIdle()
+        val listener = loadAndCaptureListener()
+        val error = PlaybackException("Codec error", null, PlaybackException.ERROR_CODE_DECODER_INIT_FAILED)
+        listener.onPlayerError(error)
 
         val state = audioPlayer.playbackState.value
-        assertTrue(state.isPlaying)
-        // Position tracker should be running, advancing time?
-        // Advancing time in runTest might trigger the loop in startPositionTracker
-        // But ShadowMediaPlayer doesn't auto-advance position unless we tell it or use proper shadow ticking.
+        assertNotNull(state.error)
+        assertFalse(state.isLoading)
+        assertFalse(state.isPlaying)
     }
 
     @Test
-    fun `Play uninitialized player edge case`() = runTest {
-        audioPlayer.play()
+    fun `Play calls through to ExoPlayer when ready`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
 
-        val state = audioPlayer.playbackState.value
-        assertEquals("Player not initialized. Call load() first.", state.error)
-    }
-
-    @Test
-    fun `Play while loading race condition`() = runTest {
-        // Start load but don't let it finish (no advanceUntilIdle immediately?)
-        // Actually load suspends on IO but the scope launches on Main.
-        // We need to hook into the moment before it's prepared.
-
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        // We don't wait for prepare to finish completely? 
-        // In Robolectric, prepareAsync is often synchronous or needs idle.
-        // We can simulate "isLoading = true" state check.
-
-        // To properly test "Play while loading", we need to pause execution between setting isLoading=true and the completion.
-        // With the current implementation using withContext(Dispatchers.IO), it's tricky to pause "inside" the function.
-        // But we can call load, and since it suspends, we can't call play() concurrently on the same thread unless we use launch.
-
-        launch {
-            audioPlayer.load(uri)
-        }
-        // load suspends, so we need to yield or ensure we are in the loading state.
-        // However, load runs on IO dispatcher.
-
-        // It's hard to guarantee the exact timing with real dispatchers, but with TestDispatcher we control time.
-        // Since load uses withContext, the calling coroutine suspends. 
-        // We can't call play() from the same coroutine until load returns.
-        // If we call play() from another coroutine:
-
-        launch {
-            // Wait a tiny bit for load to start and set isLoading=true
-            // But since load switches to IO, we might not easily catch it in the middle on a single threaded test.
-            // This test is complex to orchestrate perfectly without more hooks.
-            // Logic check: load sets isLoading=true immediately.
-        }
-    }
-
-    @Test
-    fun `Pause success path`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
-        audioPlayer.load(uri)
-        advanceUntilIdle()
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(1000L)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
 
         audioPlayer.play()
-        advanceUntilIdle()
-        assertTrue(audioPlayer.playbackState.value.isPlaying)
 
-        audioPlayer.pause()
-        advanceUntilIdle()
-        assertFalse(audioPlayer.playbackState.value.isPlaying)
+        verify(mockPlayer).play()
     }
 
     @Test
-    fun `Pause ignored when not playing`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
-        audioPlayer.load(uri)
-        advanceUntilIdle()
+    fun `Play before load reports error`() = runTest {
+        audioPlayer.play()
 
-        // Not playing initially
-        assertFalse(audioPlayer.playbackState.value.isPlaying)
-
-        audioPlayer.pause()
-        advanceUntilIdle()
-
-        // Still not playing, no error
-        assertFalse(audioPlayer.playbackState.value.isPlaying)
-        assertEquals(null, audioPlayer.playbackState.value.error)
+        assertEquals("Player not initialized. Call load() first.", audioPlayer.playbackState.value.error)
+        verify(mockPlayer, never()).play()
     }
 
     @Test
-    fun `SeekTo before load ignored`() = runTest {
-        audioPlayer.seekTo(100)
+    fun `Pause calls through to ExoPlayer`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
 
-        // No crash, no state change relative to position
+        audioPlayer.pause()
+
+        verify(mockPlayer).pause()
+    }
+
+    @Test
+    fun `SeekTo clamps position and updates state`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
+
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(2000L)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+
+        audioPlayer.seekTo(1000L)
+
+        verify(mockPlayer).seekTo(1000L)
+        assertEquals(1000L, audioPlayer.playbackState.value.currentPositionMillis)
+    }
+
+    @Test
+    fun `SeekTo clamps to maximum duration`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
+
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(2000L)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+
+        audioPlayer.seekTo(9999L)
+
+        verify(mockPlayer).seekTo(2000L)
+    }
+
+    @Test
+    fun `SeekTo without player does nothing`() = runTest {
+        audioPlayer.seekTo(500L)
+
+        verify(mockPlayer, never()).seekTo(any())
         assertEquals(0L, audioPlayer.playbackState.value.currentPositionMillis)
-        // No error triggered for uninitialized player in seekTo implementation (it checks mediaPlayer?.let)
-        assertEquals(null, audioPlayer.playbackState.value.error)
     }
 
     @Test
-    fun `Stop resets player and state`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
-        audioPlayer.load(uri)
+    fun `Stop resets state and retains URI`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
-
-        audioPlayer.play()
-        advanceUntilIdle()
-        assertTrue(audioPlayer.playbackState.value.isPlaying)
 
         audioPlayer.stop()
-        advanceUntilIdle()
 
+        verify(mockPlayer).stop()
+        verify(mockPlayer).clearMediaItems()
         val state = audioPlayer.playbackState.value
         assertFalse(state.isPlaying)
         assertEquals(0L, state.currentPositionMillis)
-        // Current URI string should be retained according to implementation
-        assertEquals(uri, state.currentUriString)
-        assertEquals(
-            0L,
-            state.totalDurationMillis
-        ) // Implementation resets to PlaybackState.default copy(uri)
+        assertEquals("content://test/audio", state.currentUriString)
     }
 
     @Test
-    fun `Release clears resources`() = runTest {
-        val uri = "android.resource://com.waveform/raw/test_audio"
-        ShadowMediaPlayer.addMediaInfo(
-            DataSource.toDataSource(uri),
-            ShadowMediaPlayer.MediaInfo(1000, 0)
-        )
-        audioPlayer.load(uri)
+    fun `Release clears all resources and resets to default state`() = runTest {
+        audioPlayer.load("content://test/audio")
         advanceUntilIdle()
 
         audioPlayer.release()
         advanceUntilIdle()
 
-        val state = audioPlayer.playbackState.value
-        assertEquals(PlaybackState.default, state)
+        verify(mockPlayer).release()
+        assertEquals(PlaybackState.default, audioPlayer.playbackState.value)
+    }
 
-        // Ensure player is null/released. ShadowMediaPlayer doesn't expose "isReleased" directly easily 
-        // but we can check if accessing it throws or if we can't get it.
+    @Test
+    fun `IsPlaying listener updates state`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
+
+        val listener = loadAndCaptureListener()
+        listener.onIsPlayingChanged(true)
+        assertTrue(audioPlayer.playbackState.value.isPlaying)
+
+        listener.onIsPlayingChanged(false)
+        assertFalse(audioPlayer.playbackState.value.isPlaying)
+    }
+
+    @Test
+    fun `Playback completion sets position to total duration`() = runTest {
+        audioPlayer.load("content://test/audio")
+        advanceUntilIdle()
+
+        val listener = loadAndCaptureListener()
+        whenever(mockPlayer.duration).thenReturn(5000L)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+        listener.onPlaybackStateChanged(Player.STATE_ENDED)
+
+        val state = audioPlayer.playbackState.value
+        assertFalse(state.isPlaying)
+        assertEquals(5000L, state.currentPositionMillis)
     }
 }

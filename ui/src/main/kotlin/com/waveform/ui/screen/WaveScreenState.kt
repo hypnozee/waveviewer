@@ -17,11 +17,10 @@ data class WaveScreenState(
     val isPlaying: Boolean = false,
     val currentPositionMillis: Long = 0L,
     val totalDurationMillis: Long = 0L,
-    val currentAudioPosition: String = "00:00",
-    val totalAudioDuration: String = "00:00",
+    val isSeeking: Boolean = false,
     val errorMessage: String? = null,
     val dynamicNormalizationEnabled: Boolean = false,
     val currentNumSegments: Int = DEFAULT_SEGMENTS_NUMBER,
     val displayMinAmplitude: Float = -1.0f,
-    val displayMaxAmplitude: Float = 1.0f
+    val displayMaxAmplitude: Float = 1.0f,
 )

@@ -16,7 +16,6 @@ val uiModule = module {
             releasePlayerUseCase = get(),
             getWaveformUseCase = get(),
             getAudioTrackDetailsUseCase = get(),
-            millisToDigitalClockUseCase = get(),
         )
     }
 }

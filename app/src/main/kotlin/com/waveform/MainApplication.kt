@@ -2,7 +2,7 @@ package com.waveform
 
 import android.app.Application
 import com.waveform.data.di.dataModule
-import com.waveform.domain.di.domainModule
+import com.waveform.di.domainModule
 import com.waveform.ui.di.uiModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
