@@ -53,7 +53,10 @@ class WaveViewModel(
                     val currentFileUriString = currentState.fileUri?.toString()
 
                     val cachedDataForUri = if (currentFileUriString != null) {
-                        waveformCache[CacheKey(currentFileUriString, currentState.currentNumSegments)]
+                        waveformCache[CacheKey(
+                            currentFileUriString,
+                            currentState.currentNumSegments
+                        )]
                     } else {
                         null
                     }
@@ -92,7 +95,7 @@ class WaveViewModel(
         waveformData: List<WaveformSegment>?,
         dynamicNormalizationEnabled: Boolean,
     ): Pair<Float, Float> {
-        return if (dynamicNormalizationEnabled && waveformData != null && waveformData.isNotEmpty()) {
+        return if (dynamicNormalizationEnabled && !waveformData.isNullOrEmpty()) {
             val trueMin = waveformData.minOfOrNull { it.min } ?: -1f
             val trueMax = waveformData.maxOfOrNull { it.max } ?: 1f
             trueMin to trueMax
@@ -105,7 +108,10 @@ class WaveViewModel(
         when (intent) {
             is WaveScreenIntent.PickFileClicked -> {
                 _viewState.update {
-                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(null, it.dynamicNormalizationEnabled)
+                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(
+                        null,
+                        it.dynamicNormalizationEnabled
+                    )
                     it.copy(
                         errorMessage = null,
                         waveformData = null,
@@ -121,7 +127,10 @@ class WaveViewModel(
                 val segmentsToProcess = _viewState.value.currentNumSegments
 
                 _viewState.update {
-                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(null, it.dynamicNormalizationEnabled)
+                    val (minAmp, maxAmp) = calculateDisplayAmplitudeRange(
+                        null,
+                        it.dynamicNormalizationEnabled
+                    )
                     it.copy(
                         fileUri = selectedUri,
                         fileName = null,
@@ -149,6 +158,7 @@ class WaveViewModel(
                         when (val detailsResult = getAudioTrackDetailsUseCase(selectedUriString)) {
                             is Result.Success ->
                                 _viewState.update { it.copy(fileName = detailsResult.data.fileName) }
+
                             is Result.Error ->
                                 _viewState.update { it.copy(errorMessage = detailsResult.message) }
                         }
@@ -318,6 +328,7 @@ class WaveViewModel(
                     )
                 }
             }
+
             is Result.Error -> {
                 _viewState.update { state ->
                     state.copy(errorMessage = result.message, isLoadingWaveform = false)

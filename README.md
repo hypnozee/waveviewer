@@ -23,10 +23,10 @@ It follows a modular approach, respecting CLEAN Architecture principles and MVI 
 3.  **`:ui`:**
     *   Implements the user interface and presentation logic.
     *   Displays audio waveforms.
-    *   Respects -> UDF -> principles. It fires and it forgets.
+    *   Respects → UDF → principles. It fires and it forgets.
     *   Uses Jetpack Compose.
     *   Has a UI state which stores information about all interactable components.
-    *   All possible actions (intents) are gracefully handles by ViewModel
+    *   All possible actions (intents) are gracefully handled by ViewModel
     *   `WaveScreenIntent` defines all possible intents using a sealed class.
 
 
@@ -53,7 +53,7 @@ It uses Koin for dependency injection.
 
 
 # Waveform Generation Strategy
-333Extremely helpful documentation for WAV files that I used:
+Extremely helpful documentation for WAV files that I used:
 https://www.videoproc.com/resource/wav-file.htm
 
 1.  **Header Parsing:**
@@ -76,9 +76,9 @@ https://www.videoproc.com/resource/wav-file.htm
 # Author note (`@hypnozee`):
 
 I've had a lot of fun building this app :)
-Switching from usual API consumption and UI creation I'm currently doing.
+Switching from the usual API consumption and UI creation I'm currently doing.
 I've had the chance to revise and use the knowledge I've gained during one of the interesting subjects in CS college:
 Multimedia Signal Processing.
 I've also combined this with what I like to do most: mobile apps.
-The tech stack used here is state of the art and I've hopefully emphasized what a modern, performant, scalable and UI friendly Android app should look like.
+The tech stack used here is state of the art, and I've hopefully emphasized what a modern, performant, scalable and UI-friendly Android app should look like.
 Looking forward to having a constructive discussion about each of my choices and why I made them.
