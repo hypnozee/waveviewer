@@ -6,6 +6,8 @@ This means the signal will be sampled a number of times.
 The amplitudes will then be plotted as a visual chart.
 Supports Dark Mode! Try it :)
 
+<img width="429" height="960" alt="image" src="https://github.com/user-attachments/assets/ad1a49fd-2875-4da8-8f88-8096df1456dd" />
+
 # Code Structure
 
 It follows a modular approach, respecting CLEAN Architecture principles and MVI pattern.
@@ -81,4 +83,3 @@ I've had the chance to revise and use the knowledge I've gained during one of th
 Multimedia Signal Processing.
 I've also combined this with what I like to do most: mobile apps.
 The tech stack used here is state of the art, and I've hopefully emphasized what a modern, performant, scalable and UI-friendly Android app should look like.
-Looking forward to having a constructive discussion about each of my choices and why I made them.
