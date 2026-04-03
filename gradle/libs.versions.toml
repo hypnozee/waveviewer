@@ -16,9 +16,13 @@ junit = "4.13.2"
 material = "1.13.0"
 koin = "4.2.0"
 robolectric = "4.16.1"
-androidxTestCore = "1.7.0"
 androidxTestManifest = "1.10.6"
 media3 = "1.10.0"
+
+supabase = "3.5.0"
+ktor = "3.4.2"
+kotlinxSerialization = "1.10.0"
+kotlinxSerializationPlugin = "2.3.20"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
@@ -46,16 +50,27 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 koin-test-junit4 = { module = "io.insert-koin:koin-test-junit4", version.ref = "koin" }
 
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
-androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 
+# Supabase
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-functions = { module = "io.github.jan-tennert.supabase:functions-kt" }
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
+supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
+
+# Ktor
+ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+
+# Kotlinx Serialization
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
 [plugins]
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinPluginCompose" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerializationPlugin" }

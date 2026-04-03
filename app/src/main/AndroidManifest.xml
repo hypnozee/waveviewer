@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Had to add this because of
          AppOps system_server Exception:
-         attributionTag not declared in manifest of com.pdx.ym.waveviewer -->
+         attributionTag not declared in manifest of com.hypnozee.waveviewer -->
     <attribution
         android:label="@string/media_operations_default_label"
         android:tag="media_operations_default" />

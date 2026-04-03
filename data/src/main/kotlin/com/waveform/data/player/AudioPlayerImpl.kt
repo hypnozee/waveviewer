@@ -38,7 +38,12 @@ class AudioPlayerImpl(
 
     override suspend fun load(uriString: String) = withContext(Dispatchers.Main) {
         releaseCurrentPlayer()
-        _playbackState.update { PlaybackState.default.copy(currentUriString = uriString, isLoading = true) }
+        _playbackState.update {
+            PlaybackState.default.copy(
+                currentUriString = uriString,
+                isLoading = true
+            )
+        }
 
         val exoPlayer = playerFactory(application)
         exoPlayer.addListener(object : Player.Listener {
@@ -50,9 +55,13 @@ class AudioPlayerImpl(
                             it.copy(totalDurationMillis = duration, isLoading = false, error = null)
                         }
                     }
+
                     Player.STATE_ENDED -> {
                         _playbackState.update {
-                            it.copy(isPlaying = false, currentPositionMillis = it.totalDurationMillis)
+                            it.copy(
+                                isPlaying = false,
+                                currentPositionMillis = it.totalDurationMillis
+                            )
                         }
                         stopPositionTracker()
                     }
@@ -75,7 +84,11 @@ class AudioPlayerImpl(
 
             override fun onPlayerError(error: PlaybackException) {
                 _playbackState.update {
-                    it.copy(error = "Player error: ${error.message}", isLoading = false, isPlaying = false)
+                    it.copy(
+                        error = "Player error: ${error.message}",
+                        isLoading = false,
+                        isPlaying = false
+                    )
                 }
                 releaseCurrentPlayer()
             }

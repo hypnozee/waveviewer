@@ -14,7 +14,7 @@ import org.koin.core.logger.Level
  */
 class MainApplication : Application() {
     /**
-     * when the application starts, modules are injected !
+     * when the application starts, modules are injected!
      */
     override fun onCreate() {
         super.onCreate()
