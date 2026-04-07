@@ -11,4 +11,5 @@ sealed interface WaveScreenIntent {
     data object ToggleDynamicNormalization : WaveScreenIntent
     data object ClearErrorMessage : WaveScreenIntent
     data class NumSegmentsChanged(val newNumber: Int) : WaveScreenIntent
+    data object SignOutClicked : WaveScreenIntent
 }

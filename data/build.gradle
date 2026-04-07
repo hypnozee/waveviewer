@@ -50,6 +50,7 @@ dependencies {
 
     // Ktor (HTTP engine for Supabase)
     implementation libs.ktor.client.android
+    implementation libs.ktor.client.logging
 
     // Kotlinx Serialization
     implementation libs.kotlinx.serialization.json

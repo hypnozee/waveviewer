@@ -31,6 +31,11 @@ interface AuthRepository {
     fun getCurrentUser(): UserInfo?
 
     /**
+     * Verify the OTP code sent to the user's email after sign-up.
+     */
+    suspend fun verifyOtp(email: String, token: String): Result<UserInfo>
+
+    /**
      * Observe the authentication state as a Flow.
      */
     fun observeAuthState(): Flow<AuthState>

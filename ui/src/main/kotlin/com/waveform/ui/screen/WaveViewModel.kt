@@ -14,6 +14,8 @@ import com.waveform.domain.player.usecase.SeekAudioUseCase
 import com.waveform.domain.player.usecase.StopAudioUseCase
 import com.waveform.domain.usecase.GetAudioTrackDetailsUseCase
 import com.waveform.domain.usecase.GetWaveformUseCase
+import com.waveform.domain.usecase.ObserveAuthStateUseCase
+import com.waveform.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,6 +32,8 @@ class WaveViewModel(
     private val stopAudioUseCase: StopAudioUseCase,
     private val observePlaybackStateUseCase: ObservePlaybackStateUseCase,
     private val releasePlayerUseCase: ReleasePlayerUseCase,
+    private val observeAuthStateUseCase: ObserveAuthStateUseCase,
+    private val signOutUseCase: SignOutUseCase,
 ) : ViewModel() {
 
     private val _viewState = MutableStateFlow(WaveScreenState())
@@ -46,6 +50,11 @@ class WaveViewModel(
         }
 
     init {
+        viewModelScope.launch {
+            observeAuthStateUseCase().collect { authState ->
+                _viewState.update { it.copy(authState = authState) }
+            }
+        }
         viewModelScope.launch {
             var previousIsPlaying = false
             observePlaybackStateUseCase().collect { playbackState ->
@@ -275,6 +284,10 @@ class WaveViewModel(
 
             is WaveScreenIntent.ClearErrorMessage -> {
                 _viewState.update { it.copy(errorMessage = null) }
+            }
+
+            is WaveScreenIntent.SignOutClicked -> {
+                viewModelScope.launch { signOutUseCase() }
             }
         }
     }

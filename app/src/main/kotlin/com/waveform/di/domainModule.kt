@@ -24,6 +24,7 @@ import com.waveform.domain.usecase.SignInUseCase
 import com.waveform.domain.usecase.SignOutUseCase
 import com.waveform.domain.usecase.SignUpUseCase
 import com.waveform.domain.usecase.UploadAudioFileUseCase
+import com.waveform.domain.usecase.VerifyOtpUseCase
 import org.koin.dsl.module
 
 val domainModule = module {
@@ -51,6 +52,7 @@ val domainModule = module {
     factory { SignInUseCase(authRepository = get<AuthRepository>()) }
     factory { SignUpUseCase(authRepository = get<AuthRepository>()) }
     factory { SignOutUseCase(authRepository = get<AuthRepository>()) }
+    factory { VerifyOtpUseCase(authRepository = get<AuthRepository>()) }
     factory { ObserveAuthStateUseCase(authRepository = get<AuthRepository>()) }
 
     // Remote audio file use cases

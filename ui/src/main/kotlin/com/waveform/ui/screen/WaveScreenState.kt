@@ -1,6 +1,7 @@
 package com.waveform.ui.screen
 
 import android.net.Uri
+import com.waveform.domain.model.AuthState
 import com.waveform.domain.model.WaveformSegment
 
 const val DEFAULT_SEGMENTS_NUMBER = 500
@@ -23,4 +24,5 @@ data class WaveScreenState(
     val currentNumSegments: Int = DEFAULT_SEGMENTS_NUMBER,
     val displayMinAmplitude: Float = -1.0f,
     val displayMaxAmplitude: Float = 1.0f,
+    val authState: AuthState = AuthState.Loading,
 )

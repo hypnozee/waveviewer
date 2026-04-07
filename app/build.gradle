@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 android {
@@ -67,6 +68,10 @@ dependencies {
 
     implementation libs.koin.android
     implementation libs.koin.androidx.compose
+
+    implementation libs.androidx.navigation3.runtime
+    implementation libs.androidx.navigation3.ui
+    implementation libs.kotlinx.serialization.json
 
     testImplementation libs.junit
     testImplementation libs.mockito.core

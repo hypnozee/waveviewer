@@ -19,6 +19,7 @@ robolectric = "4.16.1"
 androidxTestManifest = "1.10.6"
 media3 = "1.10.0"
 
+navigation3 = "1.0.1"
 supabase = "3.5.0"
 ktor = "3.4.2"
 kotlinxSerialization = "1.10.0"
@@ -65,8 +66,13 @@ supabase-functions = { module = "io.github.jan-tennert.supabase:functions-kt" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
 supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
 
+# Navigation 3
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+
 # Ktor
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 
 # Kotlinx Serialization
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
