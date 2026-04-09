@@ -71,18 +71,18 @@ fun WaveScreen(
     if (showFileSourceDialog) {
         FileSourceDialog(
             isAuthenticated = viewState.authState is AuthState.Authenticated,
-            onDismiss = { },
-            onLoginSignUp = { onNavigateToAuth() },
-            onBrowseFiles = { onNavigateToFiles() },
-            onPickFromDevice = { pickFromDevice() },
-            onSignOut = { onIntent(WaveScreenIntent.SignOutClicked) },
+            onDismiss = { showFileSourceDialog = false },
+            onLoginSignUp = { showFileSourceDialog = false; onNavigateToAuth() },
+            onBrowseFiles = { showFileSourceDialog = false; onNavigateToFiles() },
+            onPickFromDevice = { showFileSourceDialog = false; pickFromDevice() },
+            onSignOut = { showFileSourceDialog = false; onIntent(WaveScreenIntent.SignOutClicked) },
         )
     }
 
     WaveScreenContent(
         viewState = viewState,
         onIntent = onIntent,
-        onFilePickerBarClicked = { },
+        onFilePickerBarClicked = { showFileSourceDialog = true },
     )
 }
 
