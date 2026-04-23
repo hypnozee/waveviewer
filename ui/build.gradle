@@ -4,14 +4,14 @@ plugins {
 }
 
 android {
-    namespace 'com.waveform.ui'
-    compileSdk = 36
+    namespace = 'com.waveform.ui'
+    compileSdk = 37
 
     defaultConfig {
         minSdk 29
     }
     buildFeatures {
-        compose true
+        compose = true
     }
     kotlin {
         jvmToolchain(21)

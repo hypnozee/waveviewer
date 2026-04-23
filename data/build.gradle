@@ -4,8 +4,8 @@ plugins {
 }
 
 android {
-    namespace 'com.waveform.data'
-    compileSdk = 36
+    namespace = 'com.waveform.data'
+    compileSdk = 37
 
     defaultConfig {
         minSdk 29
@@ -21,7 +21,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     kotlin {

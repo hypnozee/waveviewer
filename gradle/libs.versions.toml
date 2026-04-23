@@ -1,5 +1,5 @@
 [versions]
-kotlinPluginCompose = "2.3.20"
+kotlinPluginCompose = "2.3.21"
 coreKtx = "1.18.0"
 coroutinesAndroid = "1.10.2"
 coroutinesCore = "1.10.2"
@@ -8,22 +8,25 @@ mockitoCore = "5.23.0"
 mockitoKotlin = "6.3.0"
 mockitoInline = "5.2.0"
 
-composeBom = "2026.03.01"
+composeBom = "2026.04.01"
 activityCompose = "1.13.0"
 lifecycle = "2.10.0"
 
 junit = "4.13.2"
 material = "1.13.0"
-koin = "4.2.0"
+koin = "4.2.1"
 robolectric = "4.16.1"
-androidxTestManifest = "1.10.6"
+androidxTestManifest = "1.11.0"
 media3 = "1.10.0"
 
-navigation3 = "1.0.1"
+navigation3 = "1.1.1"
 supabase = "3.5.0"
-ktor = "3.4.2"
-kotlinxSerialization = "1.10.0"
-kotlinxSerializationPlugin = "2.3.20"
+ktor = "3.4.3"
+kotlinxSerialization = "1.11.0"
+kotlinxSerializationPlugin = "2.3.21"
+
+# Kotzilla
+kotzilla = "2.1.3"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
@@ -77,6 +80,12 @@ ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "k
 # Kotlinx Serialization
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
+# Kotzilla
+kotzilla-sdk = { group = "io.kotzilla", name = "kotzilla-sdk", version.ref = "kotzilla" }
+
+
 [plugins]
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinPluginCompose" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerializationPlugin" }
+# Kotzilla
+kotzilla = { id = "io.kotzilla.kotzilla-plugin", version.ref = "kotzilla" }
