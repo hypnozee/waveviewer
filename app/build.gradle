@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlinx.serialization)
-//    alias(libs.plugins.kotzilla)
+    alias(libs.plugins.kotzilla)
 }
 
 android {
@@ -84,4 +84,8 @@ dependencies {
     testImplementation libs.koin.test.junit4
 
     implementation(libs.kotzilla.sdk)
+}
+
+kotzilla {
+    composeInstrumentation = false
 }

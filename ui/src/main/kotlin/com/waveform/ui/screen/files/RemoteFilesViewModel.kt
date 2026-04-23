@@ -5,15 +5,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waveform.domain.auth.AuthInteractor
 import com.waveform.domain.core.Result
 import com.waveform.domain.model.AudioFileInfo
 import com.waveform.domain.model.AuthState
-import com.waveform.domain.usecase.DeleteAudioFileUseCase
-import com.waveform.domain.usecase.DownloadAudioFileUseCase
-import com.waveform.domain.usecase.GetPublicAudioFilesUseCase
-import com.waveform.domain.usecase.GetUserAudioFilesUseCase
-import com.waveform.domain.usecase.ObserveAuthStateUseCase
-import com.waveform.domain.usecase.UploadAudioFileUseCase
+import com.waveform.domain.remote.RemoteFilesInteractor
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,12 +22,8 @@ import java.io.File
 
 class RemoteFilesViewModel(
     private val app: Application,
-    private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val getPublicAudioFilesUseCase: GetPublicAudioFilesUseCase,
-    private val getUserAudioFilesUseCase: GetUserAudioFilesUseCase,
-    private val downloadAudioFileUseCase: DownloadAudioFileUseCase,
-    private val uploadAudioFileUseCase: UploadAudioFileUseCase,
-    private val deleteAudioFileUseCase: DeleteAudioFileUseCase,
+    private val authInteractor: AuthInteractor,
+    private val remoteFilesInteractor: RemoteFilesInteractor,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RemoteFilesScreenState())
@@ -42,7 +34,7 @@ class RemoteFilesViewModel(
 
     init {
         viewModelScope.launch {
-            observeAuthStateUseCase()
+            authInteractor.observeAuthState()
                 .filter { it !is AuthState.Loading }
                 .distinctUntilChanged()
                 .collect { authState ->
@@ -61,7 +53,7 @@ class RemoteFilesViewModel(
         if (_state.value.downloadingFileId != null) return
         _state.update { it.copy(downloadingFileId = file.id, errorMessage = null) }
         viewModelScope.launch {
-            when (val result = downloadAudioFileUseCase(file.bucketId, file.storagePath)) {
+            when (val result = remoteFilesInteractor.downloadAudioFile(file.bucketId, file.storagePath)) {
                 is Result.Success -> {
                     val uri = saveToCache(file.name, result.data)
                     _state.update { it.copy(downloadingFileId = null) }
@@ -85,7 +77,7 @@ class RemoteFilesViewModel(
                     _state.update { it.copy(uploadInProgress = false, errorMessage = "Could not read file.") }
                     return@launch
                 }
-                when (val result = uploadAudioFileUseCase(fileName, mimeType, bytes)) {
+                when (val result = remoteFilesInteractor.uploadAudioFile(fileName, mimeType, bytes)) {
                     is Result.Success -> {
                         _state.update { it.copy(uploadInProgress = false) }
                         loadFiles(isAuthenticated = true)
@@ -102,7 +94,7 @@ class RemoteFilesViewModel(
 
     fun deleteFile(file: AudioFileInfo) {
         viewModelScope.launch {
-            when (val result = deleteAudioFileUseCase(file.id)) {
+            when (val result = remoteFilesInteractor.deleteAudioFile(file.id)) {
                 is Result.Success -> loadFiles(_state.value.isAuthenticated)
                 is Result.Error -> _state.update { it.copy(errorMessage = result.message) }
             }
@@ -116,7 +108,7 @@ class RemoteFilesViewModel(
     private fun loadFiles(isAuthenticated: Boolean) {
         _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            val result = if (isAuthenticated) getUserAudioFilesUseCase() else getPublicAudioFilesUseCase()
+            val result = if (isAuthenticated) remoteFilesInteractor.getUserAudioFiles() else remoteFilesInteractor.getPublicAudioFiles()
             when (result) {
                 is Result.Success -> _state.update { it.copy(isLoading = false, files = result.data) }
                 is Result.Error -> _state.update { it.copy(isLoading = false, errorMessage = result.message) }

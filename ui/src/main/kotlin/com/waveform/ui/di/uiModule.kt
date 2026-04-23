@@ -10,37 +10,24 @@ import org.koin.dsl.module
 val uiModule = module {
     viewModel {
         WaveViewModel(
-            loadAudioUseCase = get(),
-            playAudioUseCase = get(),
-            pauseAudioUseCase = get(),
-            seekAudioUseCase = get(),
-            stopAudioUseCase = get(),
-            observePlaybackStateUseCase = get(),
-            releasePlayerUseCase = get(),
             getWaveformUseCase = get(),
             getAudioTrackDetailsUseCase = get(),
-            observeAuthStateUseCase = get(),
-            signOutUseCase = get(),
+            audioPlayerInteractor = get(),
+            authInteractor = get(),
         )
     }
 
     viewModel {
         AuthViewModel(
-            signInUseCase = get(),
-            signUpUseCase = get(),
-            verifyOtpUseCase = get(),
+            authInteractor = get(),
         )
     }
 
     viewModel {
         RemoteFilesViewModel(
             app = androidApplication(),
-            observeAuthStateUseCase = get(),
-            getPublicAudioFilesUseCase = get(),
-            getUserAudioFilesUseCase = get(),
-            downloadAudioFileUseCase = get(),
-            uploadAudioFileUseCase = get(),
-            deleteAudioFileUseCase = get(),
+            authInteractor = get(),
+            remoteFilesInteractor = get(),
         )
     }
 }

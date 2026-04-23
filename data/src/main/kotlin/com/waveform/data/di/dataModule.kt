@@ -14,13 +14,13 @@ import org.koin.dsl.module
 
 val dataModule = module {
     // Existing
-    single<AudioRepository> { AudioRepositoryImpl(androidApplication().contentResolver) }
-    single<AudioPlayer> { AudioPlayerImpl(androidApplication()) }
+    single<AudioRepository>(createdAtStart = true) { AudioRepositoryImpl(androidApplication().contentResolver) }
+    single<AudioPlayer>(createdAtStart = true) { AudioPlayerImpl(androidApplication()) }
 
     // Supabase client
-    single { SupabaseClientProvider.client }
+    single(createdAtStart = true) { SupabaseClientProvider.client }
 
     // Remote repositories
-    single<AuthRepository> { AuthRepositoryImpl(client = get()) }
+    single<AuthRepository>(createdAtStart = true) { AuthRepositoryImpl(client = get()) }
     single<RemoteAudioRepository> { RemoteAudioRepositoryImpl(client = get()) }
 }

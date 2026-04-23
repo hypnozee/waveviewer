@@ -2,10 +2,8 @@ package com.waveform.ui.screen.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waveform.domain.auth.AuthInteractor
 import com.waveform.domain.core.Result
-import com.waveform.domain.usecase.SignInUseCase
-import com.waveform.domain.usecase.SignUpUseCase
-import com.waveform.domain.usecase.VerifyOtpUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,9 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
-    private val signInUseCase: SignInUseCase,
-    private val signUpUseCase: SignUpUseCase,
-    private val verifyOtpUseCase: VerifyOtpUseCase,
+    private val authInteractor: AuthInteractor,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthScreenState())
@@ -61,7 +57,7 @@ class AuthViewModel(
         }
         _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            when (val result = verifyOtpUseCase(email, token)) {
+            when (val result = authInteractor.verifyOtp(email, token)) {
                 is Result.Success -> _events.send(AuthEvent.Success)
                 is Result.Error -> _state.update { it.copy(isLoading = false, errorMessage = result.message) }
             }
@@ -76,7 +72,7 @@ class AuthViewModel(
         }
         _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            when (val result = signInUseCase(s.email.trim(), s.password)) {
+            when (val result = authInteractor.signIn(s.email.trim(), s.password)) {
                 is Result.Success -> _events.send(AuthEvent.Success)
                 is Result.Error -> _state.update { it.copy(isLoading = false, errorMessage = result.message) }
             }
@@ -95,7 +91,7 @@ class AuthViewModel(
         }
         _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            when (val result = signUpUseCase(s.email.trim(), s.password)) {
+            when (val result = authInteractor.signUp(s.email.trim(), s.password)) {
                 is Result.Success -> {
                     // OTP sent — move to verification step
                     _state.update { it.copy(isLoading = false, pendingOtpEmail = s.email.trim()) }

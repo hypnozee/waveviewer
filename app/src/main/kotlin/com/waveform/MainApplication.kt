@@ -8,7 +8,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
-//import io.kotzilla.generated.monitoring
+import io.kotzilla.generated.monitoring
 
 /**
  * Application class for Koin + Android context, logger.
@@ -23,7 +23,7 @@ class MainApplication : Application() {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@MainApplication)
             modules(dataModule, uiModule, domainModule)
-//            monitoring()
+            monitoring()
         }
     }
 }

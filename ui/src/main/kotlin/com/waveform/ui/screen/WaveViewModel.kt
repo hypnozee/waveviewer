@@ -2,20 +2,13 @@ package com.waveform.ui.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waveform.domain.auth.AuthInteractor
 import com.waveform.domain.core.Result
 import com.waveform.domain.model.WaveformResultData
 import com.waveform.domain.model.WaveformSegment
-import com.waveform.domain.player.usecase.LoadAudioUseCase
-import com.waveform.domain.player.usecase.ObservePlaybackStateUseCase
-import com.waveform.domain.player.usecase.PauseAudioUseCase
-import com.waveform.domain.player.usecase.PlayAudioUseCase
-import com.waveform.domain.player.usecase.ReleasePlayerUseCase
-import com.waveform.domain.player.usecase.SeekAudioUseCase
-import com.waveform.domain.player.usecase.StopAudioUseCase
+import com.waveform.domain.player.AudioPlayerInteractor
 import com.waveform.domain.usecase.GetAudioTrackDetailsUseCase
 import com.waveform.domain.usecase.GetWaveformUseCase
-import com.waveform.domain.usecase.ObserveAuthStateUseCase
-import com.waveform.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -25,15 +18,8 @@ import kotlin.math.abs
 class WaveViewModel(
     private val getWaveformUseCase: GetWaveformUseCase,
     private val getAudioTrackDetailsUseCase: GetAudioTrackDetailsUseCase,
-    private val loadAudioUseCase: LoadAudioUseCase,
-    private val playAudioUseCase: PlayAudioUseCase,
-    private val pauseAudioUseCase: PauseAudioUseCase,
-    private val seekAudioUseCase: SeekAudioUseCase,
-    private val stopAudioUseCase: StopAudioUseCase,
-    private val observePlaybackStateUseCase: ObservePlaybackStateUseCase,
-    private val releasePlayerUseCase: ReleasePlayerUseCase,
-    private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val signOutUseCase: SignOutUseCase,
+    private val audioPlayerInteractor: AudioPlayerInteractor,
+    private val authInteractor: AuthInteractor,
 ) : ViewModel() {
 
     private val _viewState = MutableStateFlow(WaveScreenState())
@@ -51,13 +37,13 @@ class WaveViewModel(
 
     init {
         viewModelScope.launch {
-            observeAuthStateUseCase().collect { authState ->
+            authInteractor.observeAuthState().collect { authState ->
                 _viewState.update { it.copy(authState = authState) }
             }
         }
         viewModelScope.launch {
             var previousIsPlaying = false
-            observePlaybackStateUseCase().collect { playbackState ->
+            audioPlayerInteractor.playbackState.collect { playbackState ->
                 _viewState.update { currentState ->
                     val currentFileUriString = currentState.fileUri?.toString()
 
@@ -160,8 +146,8 @@ class WaveViewModel(
                 // If loadAudioUseCase throws, the outer catch prevents waveform processing.
                 viewModelScope.launch {
                     try {
-                        stopAudioUseCase()
-                        loadAudioUseCase(selectedUriString)
+                        audioPlayerInteractor.stop()
+                        audioPlayerInteractor.load(selectedUriString)
 
                         // Non-fatal: filename only; continue even on error (#6 — last error wins)
                         when (val detailsResult = getAudioTrackDetailsUseCase(selectedUriString)) {
@@ -248,16 +234,16 @@ class WaveViewModel(
 
             is WaveScreenIntent.PlayPauseClicked -> {
                 if (_viewState.value.isPlaying) {
-                    pauseAudioUseCase()
+                    audioPlayerInteractor.pause()
                 } else {
                     if (_viewState.value.fileUri != null) {
                         if (!_viewState.value.isPlayerLoading) {
                             if (_viewState.value.totalDurationMillis > 0 &&
                                 abs(_viewState.value.currentPositionMillis - _viewState.value.totalDurationMillis) < 500
                             ) {
-                                seekAudioUseCase(0L)
+                                audioPlayerInteractor.seekTo(0L)
                             }
-                            playAudioUseCase()
+                            audioPlayerInteractor.play()
                         } else {
                             _viewState.update { it.copy(errorMessage = "Player is still loading the audio.") }
                         }
@@ -268,7 +254,7 @@ class WaveViewModel(
             }
 
             is WaveScreenIntent.SeekDragStarted -> {
-                if (_viewState.value.isPlaying) pauseAudioUseCase()
+                if (_viewState.value.isPlaying) audioPlayerInteractor.pause()
                 _viewState.update { it.copy(isSeeking = true) }
             }
 
@@ -276,8 +262,8 @@ class WaveViewModel(
                 val totalDuration = _viewState.value.totalDurationMillis
                 if (totalDuration > 0 && !_viewState.value.isPlayerLoading) {
                     val newPosition = (totalDuration * intent.positionFraction).toLong()
-                    seekAudioUseCase(newPosition)
-                    playAudioUseCase()
+                    audioPlayerInteractor.seekTo(newPosition)
+                    audioPlayerInteractor.play()
                 }
                 _viewState.update { it.copy(isSeeking = false) }
             }
@@ -287,7 +273,7 @@ class WaveViewModel(
             }
 
             is WaveScreenIntent.SignOutClicked -> {
-                viewModelScope.launch { signOutUseCase() }
+                viewModelScope.launch { authInteractor.signOut() }
             }
         }
     }
@@ -352,7 +338,7 @@ class WaveViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        releasePlayerUseCase()
+        audioPlayerInteractor.release()
         waveformCache.clear()
     }
 }
